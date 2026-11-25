@@ -1,0 +1,2136 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FinSplit">
+    <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <meta name="theme-color" content="#6366f1" />
+    <link rel="manifest" href="/manifest.json">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="style.css?v=111">
+</head>
+
+<body class="dark-mode">
+
+    <div id="user-selection-view" style="display: none;">
+        <div class="selection-container">
+            <h1 class="main-title">FinSplit</h1>
+            <div id="user-profiles" class="profile-list"></div>
+        </div>
+    </div>
+
+    <div id="admin-dashboard-view" style="display: none;">
+        <div class="selection-container" style="max-width: 600px;">
+            <h1 class="main-title"><i data-lucide="shield"></i> Quản trị hệ thống</h1>
+            <button class="btn-secondary" id="exit-admin-btn" style="width: 100%; margin-bottom: 20px;"><i
+                    data-lucide="arrow-left"></i> Thoát vùng quản trị</button>
+
+            <h3 style="margin-bottom:10px; margin-top:20px; font-size:1.1rem; color:var(--primary);">1. Nhật ký hoạt động siêu chi tiết
+                (Trace Logs)</h3>
+            <div id="admin-logs-section" style="background: var(--bg-card); padding: 10px; border-radius: var(--radius); margin-bottom: 20px; text-align: left; font-size: 0.9rem;">
+                <div id="log-tabs" style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                    <button class="log-tab-btn active" data-tab="login" style="padding:6px 14px; border-radius:20px; border:1.5px solid var(--primary); background:var(--primary); color:#fff; cursor:pointer; font-weight:600; font-size:0.8rem; transition:all 0.2s;">🔑 Đăng nhập</button>
+                    <button class="log-tab-btn" data-tab="payment" style="padding:6px 14px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--text-secondary); cursor:pointer; font-weight:600; font-size:0.8rem; transition:all 0.2s;">💳 Thanh toán</button>
+                    <button class="log-tab-btn" data-tab="bill" style="padding:6px 14px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--text-secondary); cursor:pointer; font-weight:600; font-size:0.8rem; transition:all 0.2s;">📄 Thêm/Sửa Bill</button>
+                    <button class="log-tab-btn" data-tab="other" style="padding:6px 14px; border-radius:20px; border:1.5px solid var(--border); background:transparent; color:var(--text-secondary); cursor:pointer; font-weight:600; font-size:0.8rem; transition:all 0.2s;">📋 Khác</button>
+                </div>
+                <div id="log-tab-login" class="log-tab-content" style="max-height:500px; overflow-y:auto;">Đang tải...</div>
+                <div id="log-tab-payment" class="log-tab-content" style="max-height:500px; overflow-y:auto; display:none;">Đang tải...</div>
+                <div id="log-tab-bill" class="log-tab-content" style="max-height:500px; overflow-y:auto; display:none;">Đang tải...</div>
+                <div id="log-tab-other" class="log-tab-content" style="max-height:500px; overflow-y:auto; display:none;">Đang tải...</div>
+            </div>
+
+            <h3 style="margin-bottom:10px; font-size:1.1rem; color:var(--primary);">2. Lịch sử hoàn thành thanh toán
+            </h3>
+            <div id="admin-payments-list"
+                style="max-height: 300px; overflow-y: auto; background: var(--bg-card); padding: 10px; border-radius: var(--radius); margin-bottom: 20px; text-align: left; font-size: 0.9rem;">
+                Đang tải...</div>
+
+            <h3 style="margin-bottom:10px; font-size:1.1rem; color:var(--primary);">3. Quản lý Lịch sử (Xóa Bill)</h3>
+            <div id="admin-history-list"
+                style="max-height: 300px; overflow-y: auto; background: var(--bg-card); padding: 10px; border-radius: var(--radius); margin-bottom: 20px; text-align: left; font-size: 0.9rem;">
+                Đang tải...</div>
+
+            <h3 style="margin-bottom:10px; font-size:1.1rem; color:var(--primary);">4. Quản lý Hồ sơ
+                người dùng</h3>
+            <div id="admin-users-list"
+                style="background: var(--bg-card); padding: 10px; border-radius: var(--radius); margin-bottom: 20px; text-align: left; font-size: 0.9rem;">
+                Đang tải...</div>
+        </div>
+    </div>
+
+    <div id="app-container" style="display: none;">
+        <header class="main-header">
+            <h1 class="main-title">FinSplit</h1>
+            <button id="user-switcher" title="Chuyển người dùng"></button>
+        </header>
+
+        <main id="page-content"></main>
+
+        <nav class="bottom-nav">
+            <a href="#" id="nav-home" class="nav-item">
+                <i data-lucide="home"></i>
+                <span>Trang chủ</span>
+            </a>
+            <a href="#" id="nav-add-expense" class="nav-item">
+                <i data-lucide="plus-circle"></i>
+                <span>Chi tiêu</span>
+            </a>
+            <a href="#" id="nav-view-debt" class="nav-item">
+                <div class="notification-badge-container">
+                    <i data-lucide="wallet"></i>
+                    <span class="notification-badge" style="display: none;">0</span>
+                </div>
+                <span>Xem nợ</span>
+            </a>
+            <a href="#" id="nav-view-total" class="nav-item">
+                <i data-lucide="pie-chart"></i>
+                <span>Tổng chi</span>
+            </a>
+            <a href="#" id="nav-history" class="nav-item">
+                <i data-lucide="book-marked"></i>
+                <span>Lịch sử</span>
+            </a>
+        </nav>
+    </div>
+
+
+    <template id="detail-view-template">
+        <div class="detail-view-wrapper">
+            <header class="page-header">
+                <h1 id="pageTitle" class="main-title">💰 Chia tiền</h1>
+            </header>
+            <div class="sticky-controls">
+                <div id="history-selector-wrapper" class="history-selector-wrapper"></div>
+                <div class="controls">
+                    <button class="btn btn-primary" id="calcBtn"><i data-lucide="save"></i> Lưu & Tính</button>
+                </div>
+            </div>
+            <div id="result"></div>
+            <div id="total" class="total"></div>
+            <div class="groups" id="groups"></div>
+        </div>
+    </template>
+
+
+    <script type="module">
+        lucide.createIcons();
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, get, child, onValue, set } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+        const firebaseConfig = { apiKey: "AIzaSyD1b0VVYy297LzrfPd4S2faljsgmNfvzEk", authDomain: "hung-355812.firebaseapp.com", databaseURL: "https://hung-355812-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "hung-355812", storageBucket: "hung-355812.appspot.com", messagingSenderId: "788577107540", appId: "1:788577107540:web:ca5b149d5e5a45bba937c1", measurementId: "G-JPNZC88YFG" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db);
+        const DEFAULT_USERS = [
+            { name: "Hưng", avatar: "img/hung.jpg", bank: "MBBANK", acc: "0397682398", fullName: "NGUYEN VIET HUNG" },
+            { name: "Dương", avatar: "img/duong.jpg", bank: "VCB", acc: "1055703954", fullName: "NGO THAI DUONG" },
+            { name: "Linh", avatar: "img/linh.jpg", bank: "", acc: "", fullName: "NGO HA PHUONG LINH", localQR: "img/qr_linh.jpg" },
+            { name: "Ngọc Dương", avatar: "img/ngocduong.jpg", bank: "MBBANK", acc: "0975347580", fullName: "NGUYEN NGOC DUONG" },
+            { name: "Sơn", avatar: "img/son.jpg", bank: "-", acc: "-", fullName: "-" }
+        ];
+        let USERS = [];
+        let NAMES = [];
+        let ALL_NAMES = [];
+        const userIPPromise = fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(data => data.ip)
+            .catch(() => 'unknown');
+
+        window.logAction = async function (actionType, message) {
+            try {
+                const currentUser = localStorage.getItem('currentUser') || 'Admin';
+                const timestamp = Date.now();
+                const ip = await userIPPromise;
+                await set(ref(db, `logs/${timestamp}`), {
+                    user: currentUser,
+                    type: actionType,
+                    message: message,
+                    time: timestamp,
+                    ip: ip
+                });
+            } catch (e) { console.error("Lỗi ghi log:", e); }
+        };
+
+        async function loadAdminDashboard() {
+            const usersListEl = document.getElementById('admin-users-list');
+            const payListEl = document.getElementById('admin-payments-list');
+            const historyListEl = document.getElementById('admin-history-list');
+
+            document.getElementById('exit-admin-btn').onclick = () => {
+                document.getElementById('admin-dashboard-view').style.display = 'none';
+                document.getElementById('user-selection-view').style.display = 'block';
+            };
+
+            const [snapUsers, snapPaid, snapLogs, snapHistory] = await Promise.all([
+                get(ref(db, 'users')),
+                get(ref(db, 'paidList')),
+                get(ref(db, 'logs')),
+                get(ref(db, 'history'))
+            ]);
+
+            const allUsers = snapUsers.val() || [];
+            const paidStatus = snapPaid.val() || {};
+            const logs = snapLogs.val() || {};
+            const allHistory = snapHistory.val() || {};
+
+            // Render Users List for Edit
+            usersListEl.innerHTML = '';
+            allUsers.forEach((u, index) => {
+                const div = document.createElement('div');
+                div.style.padding = '8px'; div.style.borderBottom = '1px dotted var(--border)'; div.style.display = 'flex'; div.style.justifyContent = 'space-between'; div.style.alignItems = 'center';
+                if (u.deleted) div.style.opacity = '0.5';
+                const deletedBadge = u.deleted ? '<span style="background:#ef4444; color:#fff; font-size:0.65rem; padding:1px 6px; border-radius:4px; margin-left:6px; font-weight:600;">Đã xoá</span>' : '';
+                const actionButtons = u.deleted
+                    ? `<button class="btn-secondary" style="padding: 4px 8px; font-size:0.8rem; min-width:60px; background:#10b981; border:none; border-radius:4px; color:#fff; cursor:pointer;" onclick="restoreUserByAdmin(${index})">Khôi phục</button>`
+                    : `<button class="btn-secondary" style="padding: 4px 8px; font-size:0.8rem; min-width:50px" onclick="editUserByAdmin(${index})">Sửa</button>
+                       <button class="btn-danger" style="padding: 4px 8px; font-size:0.8rem; background:#ef4444; border:none; border-radius:4px; color:#fff; cursor:pointer;" onclick="deleteUserByAdmin(${index})">Xóa</button>`;
+                div.innerHTML = `<div><strong>${u.name}</strong>${deletedBadge}<br><small style="color:var(--text-secondary)">${u.bank || ''} - ${u.acc || ''}</small></div>
+            <div style="display:flex; gap:5px;">
+              ${actionButtons}
+            </div>`;
+                usersListEl.appendChild(div);
+            });
+
+            const addUserByAdminBtn = document.createElement('button');
+            addUserByAdminBtn.className = 'btn btn-primary'; addUserByAdminBtn.style.marginTop = '10px'; addUserByAdminBtn.style.width = '100%';
+            addUserByAdminBtn.innerHTML = '<i data-lucide="plus"></i> Thêm thành viên';
+            addUserByAdminBtn.onclick = async () => {
+                const newName = prompt("Nhập tên người dùng mới:"); if (!newName) return;
+                const currentNames = USERS.map(user => user.name.toLowerCase());
+                if (currentNames.includes(newName.toLowerCase())) { alert("Tên này đã tồn tại!"); return; }
+
+                const bankName = prompt("Nhập Tên Ngân Hàng (VD: MBBANK, VCB...) hoặc bỏ trống:") || "-";
+                const accNum = prompt("Nhập Số Tài Khoản (hoặc bỏ trống):") || "-";
+                const fullName = prompt("Nhập Tên Chủ Tài Khoản (hoặc bỏ trống):") || "-";
+                const localQR = prompt("Nhập Link Ảnh QR Cá nhân (VD: imgur.com/... - Hoặc bỏ trống nếu để Code tự tạo):") || "";
+
+                const newUser = { name: newName, avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(newName)}&background=random`, bank: bankName, acc: accNum, fullName: fullName };
+                if (localQR) newUser.localQR = localQR;
+
+                USERS.push(newUser);
+                await set(ref(db, 'users'), USERS);
+                await window.logAction('Tạo người dùng', `Admin đã thêm người dùng mới: ${newName}`);
+                alert("Đã thêm thành công!"); loadAdminDashboard();
+            };
+            usersListEl.appendChild(addUserByAdminBtn);
+
+
+
+            // Render Payments (SỬ DỤNG LOGIC BÙ TRỪ GIỐNG TRANG XEM NỢ)
+            payListEl.innerHTML = '';
+
+            // Hàm tính nợ có bù trừ cho admin (đồng bộ với processAllDebts ở tonghop_thanhtoan.html)
+            function processDebtsForAdmin(viewerName) {
+                let debts = [];
+                let creditsAvailable = {};
+                const sortedIds = Object.keys(allHistory).sort((a, b) => a - b);
+
+                sortedIds.forEach(hId => {
+                    const record = allHistory[hId];
+                    if (!record || !record.data) return;
+                    const debtMap = calculateDebtForHistory(record.data);
+                    const title = record.title || 'Không tên';
+
+                    for (const receiver in debtMap) {
+                        if (debtMap[receiver][viewerName]) {
+                            const amount = debtMap[receiver][viewerName];
+                            const payId = `${hId}__${normalizeName(viewerName)}__${normalizeName(receiver)}`;
+                            const status = paidStatus[payId];
+                            if (amount >= 100) {
+                                debts.push({
+                                    receiver, amount, title, payId, isPaid: status,
+                                    finalAmount: amount, offsetNotes: [], consumedReversePayIds: []
+                                });
+                            }
+                        }
+                    }
+                    // Thu thập khoản ngược (người khác nợ viewerName) để tính bù trừ
+                    if (debtMap[viewerName]) {
+                        for (const debtor in debtMap[viewerName]) {
+                            const amount = debtMap[viewerName][debtor];
+                            const payId = `${hId}__${normalizeName(debtor)}__${normalizeName(viewerName)}`;
+                            const status = paidStatus[payId];
+                            if (amount >= 100 && status !== true) {
+                                if (!creditsAvailable[debtor]) creditsAvailable[debtor] = [];
+                                creditsAvailable[debtor].push({ title, amount, payId });
+                            }
+                        }
+                    }
+                });
+
+                // Áp dụng bù trừ
+                debts.forEach(debt => {
+                    if (debt.isPaid === true) { debt.finalAmount = 0; return; }
+                    const creditor = debt.receiver;
+                    if (creditsAvailable[creditor] && creditsAvailable[creditor].length > 0) {
+                        for (let i = 0; i < creditsAvailable[creditor].length; i++) {
+                            let creditBill = creditsAvailable[creditor][i];
+                            if (debt.finalAmount <= 0) break;
+                            if (creditBill.amount <= 0) continue;
+                            const deduction = Math.min(debt.finalAmount, creditBill.amount);
+                            debt.finalAmount -= deduction;
+                            creditBill.amount -= deduction;
+                            debt.offsetNotes.push(`Trừ ${fmtMoney(deduction)} từ "${creditBill.title}"`);
+                            if (creditBill.payId) debt.consumedReversePayIds.push(creditBill.payId);
+                        }
+                    }
+                });
+                return debts;
+            }
+
+            // Tạo cấu trúc phân nhóm nợ theo "Người Nợ" với bù trừ (dùng ALL users kể cả deleted)
+            const debtsByUser = {};
+            allUsers.forEach(u => {
+                const userDebts = processDebtsForAdmin(u.name);
+                if (userDebts.length > 0) debtsByUser[u.name] = userDebts;
+            });
+
+            // Render từng người dùng theo dạng thẻ Accordion
+            Object.keys(debtsByUser).forEach(payer => {
+                const userDebts = debtsByUser[payer];
+                if (userDebts.length === 0) return;
+
+                // Tính tổng dùng finalAmount (sau bù trừ) - đồng bộ với trang Xem nợ
+                const unpaidCount = userDebts.filter(d => !d.isPaid && d.finalAmount > 0).length;
+                const totalDebt = userDebts.reduce((sum, d) => {
+                    if (d.isPaid) return sum;
+                    return sum + Math.max(d.finalAmount, 0);
+                }, 0);
+                const offsetCount = userDebts.filter(d => d.isPaid === 'offset' || (!d.isPaid && d.finalAmount <= 0 && d.amount > 0)).length;
+                const isDeletedUser = allUsers.find(u => u.name === payer)?.deleted;
+                const userImg = allUsers.find(u => u.name === payer)?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(payer)}`;
+
+                const userCard = document.createElement('div');
+                userCard.className = 'admin-user-debt-card';
+                userCard.style.cssText = 'background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; cursor: pointer; overflow: hidden; transition: all 0.2s;';
+
+                let statusHtml = '';
+                if (unpaidCount > 0) {
+                    statusHtml = `<span style="color: var(--danger); font-weight: 600;">Còn nợ thực: ${fmtMoney(totalDebt)} (${unpaidCount} khoản)</span>`;
+                    if (offsetCount > 0) statusHtml += `<br><span style="color: #8b5cf6; font-size: 0.8rem;">🔄 ${offsetCount} khoản đã bù trừ</span>`;
+                } else {
+                    statusHtml = '<span style="color: var(--primary); font-weight: 600;">Đã sạch nợ ✅</span>';
+                    if (offsetCount > 0) statusHtml += `<br><span style="color: #8b5cf6; font-size: 0.8rem;">🔄 ${offsetCount} khoản bù trừ</span>`;
+                }
+
+                userCard.innerHTML = `
+                <div class="card-header" style="padding: 12px; display: flex; align-items: center; gap: 12px; background: ${unpaidCount > 0 ? 'rgba(239, 68, 68, 0.05)' : 'transparent'};">
+                    <img src="${userImg}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid ${unpaidCount > 0 ? 'var(--danger)' : 'var(--primary)'}">
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: 700; font-size: 1.1rem;">${payer}${isDeletedUser ? ' <span style="background:#ef4444; color:#fff; font-size:0.65rem; padding:1px 6px; border-radius:4px; margin-left:6px; font-weight:600;">Đã xoá</span>' : ''}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                            ${statusHtml}
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-down" class="toggle-icon" style="transition: transform 0.3s;"></i>
+                </div>
+                <div class="card-details" style="display: none; padding: 0 12px 12px 12px; border-top: 1px solid var(--border);">
+                    <div class="debt-list"></div>
+                </div>
+            `;
+
+                const detailsGrid = userCard.querySelector('.debt-list');
+                const detailsPane = userCard.querySelector('.card-details');
+                const toggleIcon = userCard.querySelector('.toggle-icon');
+
+                userDebts.forEach(d => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'padding: 10px 0; border-bottom: 1px dotted var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px;';
+
+                    const info = document.createElement('div');
+                    info.style.flex = '1';
+
+                    // Hiển thị số tiền theo trạng thái bù trừ
+                    let amountDisplay = fmtMoney(d.amount);
+                    let offsetLabel = '';
+
+                    if (d.isPaid === 'offset') {
+                        // Đã bù trừ tự động
+                        amountDisplay = `<span style="text-decoration:line-through; color:var(--text-secondary);">${fmtMoney(d.amount)}</span> <span style="color:#8b5cf6; font-weight:700;">→ 0đ</span>`;
+                        const notesHtml = d.offsetNotes.length ? '<div style="margin-top:3px; font-size:0.72rem;">' + d.offsetNotes.map(n => '• ' + n).join('<br>') + '</div>' : '';
+                        offsetLabel = `<div style="font-size:0.75rem; color:#8b5cf6; margin-top:4px; background:rgba(139,92,246,0.08); padding:6px 8px; border-radius:6px; border-left:2px solid #8b5cf6;">
+                            <div style="font-weight:700;">🔄 Bù trừ tự động</div>
+                            <div style="color:var(--text-secondary);">${d.receiver} nợ ngược ${payer} ở bill khác → cấn trừ.</div>
+                            ${notesHtml}
+                        </div>`;
+                    } else if (d.isPaid === true) {
+                        // Đã thanh toán thủ công
+                        amountDisplay = `<span style="color:var(--primary); font-weight:700;">${fmtMoney(d.amount)}</span>`;
+                        offsetLabel = `<div style="font-size:0.75rem; color:var(--primary); margin-top:4px; background:rgba(99,102,241,0.06); padding:4px 8px; border-radius:6px; border-left:2px solid var(--primary);">✅ Đã xác nhận thanh toán</div>`;
+                    } else if (d.finalAmount <= 0 && d.amount > 0) {
+                        // Sẽ được bù trừ hoàn toàn (chưa mark offset trong DB)
+                        amountDisplay = `<span style="text-decoration:line-through; color:var(--text-secondary);">${fmtMoney(d.amount)}</span> <span style="color:#8b5cf6; font-weight:700;">→ 0đ</span>`;
+                        const notesHtml = d.offsetNotes.length ? '<div style="margin-top:3px; font-size:0.72rem;">' + d.offsetNotes.map(n => '• ' + n).join('<br>') + '</div>' : '';
+                        offsetLabel = `<div style="font-size:0.75rem; color:#8b5cf6; margin-top:4px; background:rgba(139,92,246,0.08); padding:6px 8px; border-radius:6px; border-left:2px solid #8b5cf6;">
+                            <div style="font-weight:700;">🔄 Sẽ bù trừ hoàn toàn</div>
+                            <div style="color:var(--text-secondary);">${d.receiver} nợ ngược ${payer} → khi user mở Xem nợ sẽ tự cấn trừ.</div>
+                            ${notesHtml}
+                        </div>`;
+                    } else if (d.finalAmount < d.amount && d.finalAmount > 0) {
+                        // Bù trừ 1 phần
+                        amountDisplay = `<span style="text-decoration:line-through; color:var(--text-secondary);">${fmtMoney(d.amount)}</span> <span style="color:var(--danger); font-weight:700;">→ ${fmtMoney(d.finalAmount)}</span>`;
+                        const notesHtml = d.offsetNotes.length ? '<div style="margin-top:3px; font-size:0.72rem;">' + d.offsetNotes.map(n => '• ' + n).join('<br>') + '</div>' : '';
+                        offsetLabel = `<div style="font-size:0.75rem; color:#8b5cf6; margin-top:4px; background:rgba(139,92,246,0.08); padding:6px 8px; border-radius:6px; border-left:2px solid #8b5cf6;">
+                            <div style="font-weight:700;">🔄 Bù trừ 1 phần</div>
+                            <div style="color:var(--text-secondary);">${d.receiver} nợ ngược ${payer} → đã trừ ${fmtMoney(d.amount - d.finalAmount)}, còn phải trả ${fmtMoney(d.finalAmount)}.</div>
+                            ${notesHtml}
+                        </div>`;
+                    } else {
+                        // Chưa trả, không bù trừ
+                        amountDisplay = `<span style="color:var(--danger); font-weight:700;">${fmtMoney(d.amount)}</span>`;
+                    }
+
+                    info.innerHTML = `<span style="font-weight: 600;">➔ ${d.receiver}</span>: ${amountDisplay}<br><small style="color: var(--text-secondary)">${d.title}</small>${offsetLabel}`;
+
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.style.cssText = 'width: 40px; height: 35px; border-radius: 8px; border: none; cursor: pointer; font-weight: 900; font-size: 1.1rem; color: #fff; transition: transform 0.1s;';
+
+                    if (d.isPaid === true) {
+                        toggleBtn.innerText = '✓';
+                        toggleBtn.style.background = 'var(--primary)';
+                        toggleBtn.title = 'Đã trả thủ công (Bấm để Reset)';
+                    } else if (d.isPaid === 'offset') {
+                        toggleBtn.innerText = '⇄';
+                        toggleBtn.style.background = '#8b5cf6';
+                        toggleBtn.title = 'Bù trừ tự động (Bấm để Reset)';
+                    } else if (d.finalAmount <= 0) {
+                        toggleBtn.innerText = '⇄';
+                        toggleBtn.style.background = '#a78bfa';
+                        toggleBtn.title = 'Sẽ bù trừ khi user mở trang Xem nợ';
+                    } else {
+                        toggleBtn.innerText = 'X';
+                        toggleBtn.style.background = 'var(--danger)';
+                        toggleBtn.title = 'Chưa trả (Bấm để gạch nợ)';
+                    }
+
+                    toggleBtn.onclick = async (e) => {
+                        e.stopPropagation();
+                        const newState = d.isPaid ? null : true;
+                        const actionName = d.isPaid ? 'MỞ LẠI NỢ' : 'GẠCH NỢ (V)';
+                        const displayAmt = d.finalAmount > 0 ? d.finalAmount : d.amount;
+                        if (confirm(`Xác nhận ${actionName} khoản ${fmtMoney(displayAmt)} của ${payer}?`)) {
+                            await set(ref(db, `paidList/${d.payId}`), newState);
+                            // Cũng mark các khoản ngược (đã dùng bù trừ) là đã trả (true) để hoàn tất bù trừ
+                            if (newState === true && d.consumedReversePayIds && d.consumedReversePayIds.length > 0) {
+                                await Promise.all(d.consumedReversePayIds.map(revId => set(ref(db, `paidList/${revId}`), true)));
+                                // Lưu lastPaidAt cho các khoản ngược
+                                const ts = Date.now();
+                                await Promise.all(d.consumedReversePayIds.map(revId => {
+                                    const parts = revId.split('__');
+                                    if (parts.length >= 2) return set(ref(db, `history/${parts[0]}/lastPaidAt/${parts[1]}`), ts);
+                                }));
+                            }
+                            // Lưu lastPaidAt cho người nợ cụ thể
+                            if (newState === true) {
+                                const parts = d.payId.split('__');
+                                const historyId = parts[0];
+                                const payerNorm = parts[1];
+                                if (payerNorm) await set(ref(db, `history/${historyId}/lastPaidAt/${payerNorm}`), Date.now());
+                            }
+                            // Tạo bill mới nếu gạch nợ bill tháng hiện tại
+                            if (newState === true) {
+                                try {
+                                    const now = new Date();
+                                    const cm = now.getMonth(), cy = now.getFullYear();
+                                    const billId = d.payId.split('__')[0];
+                                    const billDate = new Date(parseInt(billId));
+                                    if (billDate.getMonth() === cm && billDate.getFullYear() === cy) {
+                                        const sKeys = Object.keys(allHistory).sort((a, b) => b - a);
+                                        let newestId = null, count = 0;
+                                        for (const k of sKeys) {
+                                            const dd = new Date(parseInt(k));
+                                            if (dd.getMonth() === cm && dd.getFullYear() === cy) { if (!newestId) newestId = k; count++; }
+                                        }
+                                        if (newestId === billId) {
+                                            const suffix = count >= 1 ? ` (${count + 1})` : '';
+                                            const label = `Bill Tháng ${cm + 1}/${cy}${suffix}`;
+                                            const nk = Date.now().toString();
+                                            await set(ref(db, `history/${nk}`), { title: label, createdAt: nk, totalExpense: 0, data: [] });
+                                            await window.logAction('Khởi tạo Bill', `Tự động tạo "${label}" sau admin duyệt`);
+                                        }
+                                    }
+                                } catch (err) { console.error('Auto-create bill:', err); }
+                            }
+                            await window.logAction('Admin Duyệt', `${actionName}: ${payer} ➔ ${d.receiver} (${fmtMoney(d.amount)}) tại bill "${d.title}"`);
+                            loadAdminDashboard();
+                        }
+                    };
+
+                    row.appendChild(info);
+                    row.appendChild(toggleBtn);
+                    detailsGrid.appendChild(row);
+                });
+
+                userCard.onclick = () => {
+                    const isOpen = detailsPane.style.display === 'block';
+                    detailsPane.style.display = isOpen ? 'none' : 'block';
+                    toggleIcon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                    userCard.style.boxShadow = isOpen ? 'none' : 'var(--shadow-md)';
+                };
+
+                payListEl.appendChild(userCard);
+            });
+
+            if (payListEl.innerHTML === '') payListEl.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Tất cả đã thanh toán sạch sẽ! 🎉</div>';
+
+            // Render History Management (Admin Xóa Bill)
+            historyListEl.innerHTML = '';
+            const historyKeys = Object.keys(allHistory).sort((a, b) => b - a);
+            if (historyKeys.length === 0) historyListEl.innerHTML = 'Chưa có lịch sử nào.';
+            else {
+                historyKeys.forEach(key => {
+                    const r = allHistory[key];
+                    const date = new Date(parseInt(key)).toLocaleString('vi-VN');
+                    const title = r.title || 'Không tên';
+                    const total = r.totalExpense || 0;
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding: 8px; border-bottom: 1px dotted var(--border); display: flex; justify-content: space-between; align-items: center;';
+                    div.innerHTML = `<div style="flex:1;"><strong>${title}</strong><br><small style="color:var(--text-secondary)">${date} - ${fmtMoney(total)}</small></div>
+                <button style="padding: 6px 12px; border-radius: 8px; border: none; background: var(--danger); color: #fff; cursor: pointer; font-weight: 600; font-size: 0.8rem;" data-key="${key}" data-title="${title}">Xóa</button>`;
+                    div.querySelector('button').onclick = async (e) => {
+                        e.stopPropagation();
+                        const k = e.target.dataset.key;
+                        const t = e.target.dataset.title;
+                        if (confirm(`NGUY HIỂM! Xóa vĩnh viễn bill "${t}"? Dữ liệu không thể khôi phục!`)) {
+                            await set(ref(db, `history/${k}`), null);
+                            await window.logAction('Admin Xóa Bill', `Admin đã XÓA vĩnh viễn bill: "${t}"`);
+                            loadAdminDashboard();
+                        }
+                    };
+                    historyListEl.appendChild(div);
+                });
+            }
+
+            // Render Logs - Categorized into tabs
+            const LOGIN_TYPES = ['Truy cập'];
+            const PAYMENT_TYPES = ['Xác nhận chuyển khoản', 'Hoàn thành bù trừ', 'Hủy thanh toán', 'Admin Duyệt'];
+            const BILL_TYPES = ['Khởi tạo Bill', 'Đổi tên Bill', 'Admin Xóa Bill', 'Thêm khoản chi', 'Sửa khoản chi', 'Xóa khoản chi'];
+
+            function getLogCategory(type) {
+                if (LOGIN_TYPES.includes(type)) return 'login';
+                if (PAYMENT_TYPES.includes(type)) return 'payment';
+                if (BILL_TYPES.includes(type)) return 'bill';
+                return 'other';
+            }
+
+            const tabContainers = {
+                login: document.getElementById('log-tab-login'),
+                payment: document.getElementById('log-tab-payment'),
+                bill: document.getElementById('log-tab-bill'),
+                other: document.getElementById('log-tab-other')
+            };
+
+            // Clear all tab containers
+            Object.values(tabContainers).forEach(el => el.innerHTML = '');
+
+            const logKeys = Object.keys(logs).sort((a, b) => b - a);
+            if (logKeys.length === 0) {
+                Object.values(tabContainers).forEach(el => el.innerHTML = 'Chưa có lưu vết nào.');
+            } else {
+                // Categorize and count logs, track keys per category
+                const logCounts = { login: 0, payment: 0, bill: 0, other: 0 };
+                const logKeysByCategory = { login: [], payment: [], bill: [], other: [] };
+
+                logKeys.forEach(k => {
+                    const l = logs[k];
+                    const date = new Date(parseInt(k)).toLocaleString('vi-VN');
+                    const ipDisplay = l.ip ? `<span style="background:var(--accent-bg); color:var(--accent); padding:1px 6px; border-radius:4px; font-size:0.7rem; font-weight:600; margin-left:6px;">🌐 ${l.ip}</span>` : '';
+                    const category = getLogCategory(l.type);
+                    logCounts[category]++;
+                    logKeysByCategory[category].push(k);
+                    const div = document.createElement('div');
+                    div.style.padding = '6px'; div.style.borderBottom = '1px dotted var(--border)';
+                    div.innerHTML = `<div style="font-size:0.75rem; color:var(--text-secondary)">${date} - <strong>${l.user}</strong>${ipDisplay}</div>
+                <div>[${l.type}] ${l.message}</div>`;
+                    tabContainers[category].appendChild(div);
+                });
+
+                // Thêm nút xóa vào ĐẦU mỗi tab (chỉ xóa log trong tab đó)
+                const tabLabels = { login: '🔑 Đăng nhập', payment: '💳 Thanh toán', bill: '📄 Bill', other: '📋 Khác' };
+                Object.keys(tabContainers).forEach(cat => {
+                    if (logKeysByCategory[cat].length === 0) return;
+                    const delBtn = document.createElement('button');
+                    delBtn.style.cssText = 'width:100%; padding:8px; margin-bottom:10px; border-radius:8px; border:1px solid var(--danger); background:transparent; color:var(--danger); cursor:pointer; font-weight:600; font-size:0.85rem;';
+                    delBtn.innerHTML = `🗑️ Xóa nhật ký ${tabLabels[cat]} (${logKeysByCategory[cat].length} mục)`;
+                    delBtn.onclick = async () => {
+                        const keys = logKeysByCategory[cat];
+                        if (confirm(`Xóa ${keys.length} dòng nhật ký "${tabLabels[cat]}"? Không thể khôi phục!`)) {
+                            await Promise.all(keys.map(k => set(ref(db, `logs/${k}`), null)));
+                            alert(`Đã xóa ${keys.length} dòng nhật ký ${tabLabels[cat]}!`);
+                            loadAdminDashboard();
+                        }
+                    };
+                    tabContainers[cat].insertBefore(delBtn, tabContainers[cat].firstChild);
+                });
+
+                // Update tab buttons with counts
+                document.querySelectorAll('.log-tab-btn').forEach(btn => {
+                    const tab = btn.dataset.tab;
+                    const count = logCounts[tab] || 0;
+                    const labels = { login: '🔑 Đăng nhập', payment: '💳 Thanh toán', bill: '📄 Bill', other: '📋 Khác' };
+                    btn.textContent = `${labels[tab]} (${count})`;
+                });
+
+                // Show empty message for tabs with no entries
+                Object.keys(tabContainers).forEach(cat => {
+                    if (logCounts[cat] === 0) {
+                        tabContainers[cat].innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary);">Không có lưu vết nào trong mục này.</div>';
+                    }
+                });
+            }
+
+            // Tab switching logic
+            document.querySelectorAll('.log-tab-btn').forEach(btn => {
+                btn.onclick = () => {
+                    // Update active tab style
+                    document.querySelectorAll('.log-tab-btn').forEach(b => {
+                        b.style.background = 'transparent';
+                        b.style.color = 'var(--text-secondary)';
+                        b.style.borderColor = 'var(--border)';
+                        b.classList.remove('active');
+                    });
+                    btn.style.background = 'var(--primary)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = 'var(--primary)';
+                    btn.classList.add('active');
+                    // Show/hide tab content
+                    document.querySelectorAll('.log-tab-content').forEach(c => c.style.display = 'none');
+                    document.getElementById('log-tab-' + btn.dataset.tab).style.display = 'block';
+                };
+            });
+            lucide.createIcons();
+        }
+
+        window.editUserByAdmin = async function (index) {
+            const u = USERS[index];
+            const newAvatar = prompt(`Nhập link ảnh Đại diện (Avatar) cho ${u.name}:\n(Gợi ý: Dùng link ảnh từ Facebook, Imgur hoặc Drive)`, u.avatar || '');
+            if (newAvatar === null) return;
+            const newBank = prompt(`Nhập Tên Ngân Hàng cho ${u.name}:`, u.bank !== '-' ? u.bank : '');
+            if (newBank === null) return;
+            const newAcc = prompt(`Nhập Số Tài Khoản cho ${u.name}:`, u.acc !== '-' ? u.acc : '');
+            if (newAcc === null) return;
+            const newFullName = prompt(`Nhập Tên Chủ Tài Khoản cho ${u.name}:`, u.fullName !== '-' ? u.fullName : '');
+            if (newFullName === null) return;
+            const newLocalQR = prompt(`Nhập Link Ảnh QR Cá nhân cho ${u.name} (hoặc để trống):`, u.localQR || '');
+            if (newLocalQR === null) return;
+
+            if (newAvatar.trim()) { USERS[index].avatar = newAvatar.trim(); }
+            USERS[index].bank = (newBank || '-').trim();
+            USERS[index].acc = (newAcc || '-').trim();
+            USERS[index].fullName = (newFullName || '-').trim();
+            if (newLocalQR) USERS[index].localQR = newLocalQR.trim();
+            else delete USERS[index].localQR; // remove key if empty
+
+            await set(ref(db, 'users'), USERS);
+            await window.logAction('Cập nhật người dùng', `Admin đã sửa hồ sơ của: ${u.name} (Bao gồm đổi Avatar)`);
+            alert("Đã cập nhật!");
+            loadAdminDashboard();
+        };
+
+        window.deleteUserByAdmin = async function (index) {
+            const u = USERS[index];
+            if (confirm(`Bạn có chắc chắn muốn xoá "${u.name}"?\n\nUser sẽ bị ẩn khỏi hệ thống nhưng dữ liệu nợ cũ vẫn được giữ nguyên. Bạn có thể khôi phục bất cứ lúc nào.`)) {
+                USERS[index].deleted = true;
+                await set(ref(db, 'users'), USERS);
+                NAMES = USERS.filter(u => !u.deleted).map(u => u.name);
+                ALL_NAMES = USERS.map(u => u.name);
+                await window.logAction('Xoá người dùng (soft)', `Admin đã xoá (ẩn) tài khoản: ${u.name}`);
+                alert(`Đã ẩn "${u.name}" khỏi hệ thống. Dữ liệu nợ vẫn được giữ nguyên.`);
+                loadAdminDashboard();
+            }
+        };
+
+        window.restoreUserByAdmin = async function (index) {
+            const u = USERS[index];
+            if (confirm(`Khôi phục "${u.name}" trở lại hệ thống?`)) {
+                delete USERS[index].deleted;
+                await set(ref(db, 'users'), USERS);
+                NAMES = USERS.filter(u => !u.deleted).map(u => u.name);
+                ALL_NAMES = USERS.map(u => u.name);
+                await window.logAction('Khôi phục người dùng', `Admin đã khôi phục tài khoản: ${u.name}`);
+                alert(`Đã khôi phục "${u.name}"!`);
+                loadAdminDashboard();
+            }
+        };
+
+        async function loadUsersAndStart() {
+            const snap = await get(ref(db, 'users'));
+            if (snap.exists()) {
+                USERS = snap.val();
+            } else {
+                await set(ref(db, 'users'), DEFAULT_USERS);
+                USERS = DEFAULT_USERS;
+            }
+            NAMES = USERS.filter(u => !u.deleted).map(u => u.name);
+            ALL_NAMES = USERS.map(u => u.name);
+            startApp();
+        }
+        // --- Helper Functions ---
+        const normalizeName = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+        const fmtMoney = num => Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + 'đ';
+        const parseInputToNumber = str => { if (!str) return 0; const digits = String(str).replace(/[^0-9]/g, ''); if (!digits) return 0; let num = parseInt(digits, 10); if (num < 1000) num *= 1000; return num; };
+        const getNowISO = () => { const now = new Date(); const offset = now.getTimezoneOffset() * 60000; return (new Date(now - offset)).toISOString().slice(0, 16); };
+
+        // Hàm format hiển thị 24h đẹp
+        const formatDisplayDate = (isoStr) => {
+            if (!isoStr) return '';
+            const date = new Date(isoStr);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${hours}:${minutes} - ${day}/${month}/${date.getFullYear()}`;
+        };
+
+        // Hàm đề xuất tên bill tiếp theo (Bill 4 -> Bill 5)
+        function suggestNextTitle(latestTitle) {
+            if (!latestTitle) return "Bill 1";
+            const regex = /^(.*?)(\d+)$/;
+            const match = latestTitle.match(regex);
+            if (match) {
+                const prefix = match[1];
+                const number = parseInt(match[2]);
+                return `${prefix}${number + 1}`;
+            }
+            return `${latestTitle} Mới`;
+        }
+
+        const animateCounter = (element, targetValue) => { if (!element) return; if (targetValue === 0) { element.innerHTML = ` Tổng chi: ${fmtMoney(0)}`; lucide.createIcons(); return; } const duration = 800; const startTime = performance.now(); function step(currentTime) { const elapsedTime = currentTime - startTime; const progress = Math.min(elapsedTime / duration, 1); const easeOutProgress = 1 - Math.pow(1 - progress, 3); const currentValue = Math.floor(easeOutProgress * targetValue); element.innerHTML = ` Tổng chi: ${fmtMoney(currentValue)}`; if (progress < 1) { requestAnimationFrame(step); } else { element.innerHTML = ` Tổng chi: ${fmtMoney(targetValue)}`; lucide.createIcons(); } } requestAnimationFrame(step); };
+        function calculateDebtForHistory(historyData) { const pair = {}; if (!historyData) return {}; historyData.forEach(item => { const amount = parseInputToNumber(item.amount); const bens = item.bens.filter(b => b.checked); if (bens.length === 0) return; const totalOwn = bens.reduce((s, b) => s + parseInputToNumber(b.part), 0); const remain = Math.max(amount - totalOwn, 0); const totalGuests = item.bens.reduce((s, b) => s + (parseInt(b.guestCount) || 0), 0); const tParts = bens.length + totalGuests; const share = tParts > 0 ? remain / tParts : 0; item.bens.forEach(b => { if (!b.checked && !(parseInt(b.guestCount) > 0)) return; let pay = (b.checked ? (parseInputToNumber(b.part) + share) : 0); const gCount = parseInt(b.guestCount) || 0; if (gCount > 0) { pay += share * gCount; } if (pay > 0 && item.payer !== b.name) { pair[b.name + '|' + item.payer] = (pair[b.name + '|' + item.payer] || 0) + pay; } if (pay > 0 && item.payer === b.name) { /* Người chi tự trả cho mình/khách mình -> không tạo nợ */ } }); }); const net = {}; const done = new Set(); Object.keys(pair).forEach(k => { if (done.has(k)) return; const [f, t] = k.split('|'); const rev = t + '|' + f; const a = pair[k] || 0, b = pair[rev] || 0; if (a > b) { if (!net[t]) net[t] = {}; net[t][f] = a - b; } else if (b > a) { if (!net[f]) net[f] = {}; net[f][t] = b - a; } done.add(k); done.add(rev); }); return net; }
+
+        function startApp() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                document.getElementById('user-selection-view').style.display = 'none';
+                document.getElementById('app-container').style.display = 'block';
+                initializeAppView(currentUser);
+                // [LOG] Ghi log thời gian user vào web (ghi nhận mỗi khi load lại trang gốc)
+                window.logAction('Truy cập', `${currentUser} đã mở ứng dụng`);
+
+                let lastScrollTop = 0;
+                const header = document.querySelector('.main-header');
+                window.addEventListener('scroll', function () {
+                    const headerHeight = header ? header.offsetHeight : 70;
+                    let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    const scrollHeight = document.documentElement.scrollHeight;
+                    const windowHeight = window.innerHeight;
+                    const atBottom = scrollTop + windowHeight >= scrollHeight - 20;
+
+                    if (scrollTop > lastScrollTop && scrollTop > headerHeight) {
+                        document.body.classList.add('header-hidden');
+                    } else if (scrollTop < lastScrollTop && !atBottom) {
+                        document.body.classList.remove('header-hidden');
+                    }
+                    if (scrollTop <= 10) {
+                        document.body.classList.remove('header-hidden');
+                    }
+                    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                }, false);
+            } else {
+                document.getElementById('app-container').style.display = 'none';
+                document.getElementById('user-selection-view').style.display = 'block';
+                initializeUserSelectionView();
+            }
+        }
+        loadUsersAndStart();
+
+        async function initializeUserSelectionView() {
+            document.title = 'Chọn người dùng';
+            const profileContainer = document.getElementById('user-profiles');
+            profileContainer.innerHTML = '<div class="profile-card skeleton"></div><div class="profile-card skeleton"></div>';
+
+            const allHistoryData = await get(ref(db, 'history')).then(snapshot => snapshot.val() || {});
+            const paidStatus = await get(ref(db, 'paidList')).then(snapshot => snapshot.val() || {});
+            const unpaidBillCountByUser = {};
+
+            for (const historyId in allHistoryData) {
+                const record = allHistoryData[historyId];
+                if (!record.data) continue;
+                const debtsInHistory = calculateDebtForHistory(record.data);
+                for (const receiver in debtsInHistory) {
+                    for (const payer in debtsInHistory[receiver]) {
+                        const paymentId = `${historyId}__${normalizeName(payer)}__${normalizeName(receiver)}`;
+                        if (!paidStatus[paymentId]) { unpaidBillCountByUser[payer] = (unpaidBillCountByUser[payer] || 0) + 1; }
+                    }
+                }
+            }
+
+            profileContainer.innerHTML = '';
+            document.querySelectorAll('.dynamic-btn').forEach(e => e.remove());
+
+            USERS.filter(u => !u.deleted).forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'profile-card';
+                const notificationCount = unpaidBillCountByUser[user.name] || 0;
+                card.innerHTML = ` <img src="${user.avatar}" alt="${user.name}" class="avatar"> <div class="profile-info"> <span class="profile-name">${user.name}</span> ${notificationCount > 0 ? `<span class="notification-text" style="color:var(--danger); font-weight:600;">${notificationCount} khoản nợ chưa trả</span>` : '<span class="notification-text" style="color: var(--text-secondary);">✅ Không có thông báo</span>'} </div> <i data-lucide="chevron-right"></i> `;
+                card.addEventListener('click', () => { localStorage.setItem('currentUser', user.name); window.location.reload(); });
+                profileContainer.appendChild(card);
+            });
+
+            const adminCard = document.createElement('div');
+            adminCard.className = 'profile-card dynamic-btn';
+            adminCard.style.background = 'var(--gradient-hero)';
+            adminCard.style.borderColor = 'var(--border)';
+            adminCard.innerHTML = `
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--primary-bg); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink:0;">
+                <i data-lucide="shield" style="width: 28px; height: 28px;"></i>
+            </div>
+            <div class="profile-info">
+                <span class="profile-name" style="color: var(--text-primary);">Quản trị hệ thống</span>
+                <span class="notification-text" style="color: var(--text-secondary);">Bấm để vào vùng quản trị</span>
+            </div>
+            <i data-lucide="chevron-right"></i>
+        `;
+            adminCard.addEventListener('click', () => {
+                let pass = localStorage.getItem('admin_pass');
+                
+                if (pass !== "Hung4403@") {
+                    pass = prompt("Nhập mật khẩu Quản trị:");
+                }
+
+                if (pass === "Hung4403@") {
+                    localStorage.setItem('admin_pass', pass);
+                    document.getElementById('user-selection-view').style.display = 'none';
+                    document.getElementById('admin-dashboard-view').style.display = 'block';
+                    loadAdminDashboard();
+                } else if (pass !== null) {
+                    alert("Mật khẩu không đúng!");
+                }
+            });
+            profileContainer.appendChild(adminCard);
+
+            // [NEW] Thẻ Lịch trình Du lịch
+            const tripCard = document.createElement('div');
+            tripCard.className = 'profile-card dynamic-btn';
+            tripCard.style.background = 'var(--gradient-hero, linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%))';
+            tripCard.style.borderColor = 'var(--border, #10b981)';
+            tripCard.innerHTML = `
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--primary-bg, #ffffff); display: flex; align-items: center; justify-content: center; color: #10b981; flex-shrink:0;">
+                <i data-lucide="plane" style="width: 28px; height: 28px;"></i>
+            </div>
+            <div class="profile-info">
+                <span class="profile-name" style="color: var(--text-primary, #065f46);">Lịch trình Du lịch</span>
+                <span class="notification-text" style="color: var(--text-secondary, #047857);">Bấm để xem và lên kế hoạch chung</span>
+            </div>
+            <i data-lucide="chevron-right"></i>
+            `;
+            tripCard.addEventListener('click', () => { window.location.href = 'trip.html'; });
+            profileContainer.appendChild(tripCard);
+
+            lucide.createIcons();
+        }
+
+        function renderIframePage(container, src) {
+            container.innerHTML = '';
+            const iframe = document.createElement('iframe');
+            iframe.src = src;
+            iframe.className = 'content-iframe';
+            iframe.onload = () => { };
+            container.appendChild(iframe);
+        }
+
+        async function renderDashboard(container, userName) {
+            container.innerHTML = '<div class="loading-spinner"></div>';
+            const user = USERS.find(u => u.name === userName);
+            const userAvatar = user ? user.avatar : '';
+
+            const [histSnap, paidSnap] = await Promise.all([
+                get(ref(db, 'history')),
+                get(ref(db, 'paidList'))
+            ]);
+            const allHistory = histSnap.val() || {};
+            const paidStatus = paidSnap.val() || {};
+
+            // Tính nợ dùng CÙNG LOGIC với trang Xem nợ (processAllDebts)
+            function dashboardProcessDebts(allHist, viewer) {
+                let myDebts = []; let creditsAvailable = {};
+                const sortedIds = Object.keys(allHist).sort((a, b) => a - b);
+                sortedIds.forEach(hId => {
+                    const record = allHist[hId];
+                    if (!record || !record.data) return;
+                    const debts = calculateDebtForHistory(record.data);
+                    for (const receiver in debts) {
+                        if (debts[receiver][viewer]) {
+                            const amount = debts[receiver][viewer];
+                            const payId = `${hId}__${normalizeName(viewer)}__${normalizeName(receiver)}`;
+                            const status = paidStatus[payId];
+                            if (amount >= 100) {
+                                myDebts.push({ person: receiver, originalAmount: amount, finalAmount: amount, statusInDb: status, notes: [] });
+                            }
+                        }
+                    }
+                    if (debts[viewer]) {
+                        for (const debtor in debts[viewer]) {
+                            const amount = debts[viewer][debtor];
+                            const payId = `${hId}__${normalizeName(debtor)}__${normalizeName(viewer)}`;
+                            const status = paidStatus[payId];
+                            if (amount >= 100 && status !== true) {
+                                if (!creditsAvailable[debtor]) creditsAvailable[debtor] = [];
+                                creditsAvailable[debtor].push({ amount: amount });
+                            }
+                        }
+                    }
+                });
+                myDebts.forEach(debt => {
+                    if (debt.statusInDb === true) { debt.finalAmount = 0; return; }
+                    const creditor = debt.person;
+                    if (creditsAvailable[creditor] && creditsAvailable[creditor].length > 0) {
+                        for (let i = 0; i < creditsAvailable[creditor].length; i++) {
+                            let creditBill = creditsAvailable[creditor][i];
+                            if (debt.finalAmount <= 0) break;
+                            if (creditBill.amount <= 0) continue;
+                            const deduction = Math.min(debt.finalAmount, creditBill.amount);
+                            debt.finalAmount -= deduction;
+                            creditBill.amount -= deduction;
+                        }
+                    }
+                });
+                return myDebts;
+            }
+
+            const myDebts = dashboardProcessDebts(allHistory, userName);
+            let totalYouOwe = 0;
+            let unpaidBillCount = 0;
+            const youOweDetails = {};
+            myDebts.forEach(d => {
+                if (d.statusInDb !== true && d.finalAmount > 0) {
+                    totalYouOwe += d.finalAmount;
+                    youOweDetails[d.person] = (youOweDetails[d.person] || 0) + d.finalAmount;
+                    unpaidBillCount++;
+                }
+            });
+
+            // Tính người khác nợ bạn (tương tự nhưng đảo vai)
+            let totalOwedToYou = 0;
+            const owedToYouDetails = {};
+            USERS.forEach(u => {
+                if (u.name === userName || u.deleted) return;
+                const theirDebts = dashboardProcessDebts(allHistory, u.name);
+                theirDebts.forEach(d => {
+                    if (d.person === userName && d.statusInDb !== true && d.finalAmount > 0) {
+                        totalOwedToYou += d.finalAmount;
+                        owedToYouDetails[u.name] = (owedToYouDetails[u.name] || 0) + d.finalAmount;
+                    }
+                });
+            });
+
+            // Tìm bill mới nhất
+            const sortedKeys = Object.keys(allHistory).sort((a, b) => b - a);
+            const latestBill = sortedKeys.length > 0 ? allHistory[sortedKeys[0]] : null;
+            const latestBillTotal = latestBill ? (latestBill.totalExpense || 0) : 0;
+
+            // Render Dashboard
+            let youOweHTML = '';
+            if (Object.keys(youOweDetails).length === 0) {
+                youOweHTML = '<div style="padding:8px 0; color:var(--primary); font-weight:500;">Không nợ ai cả! 🎉</div>';
+            } else {
+                Object.keys(youOweDetails).forEach(name => {
+                    const u = USERS.find(x => x.name === name);
+                    const av = u ? u.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                    youOweHTML += `<div class="debt-row">
+                    <img src="${av}" class="debt-row-avatar">
+                    <span class="debt-row-name">${name}</span>
+                    <strong class="debt-row-amount" style="color:var(--danger);">${fmtMoney(Math.round(youOweDetails[name]))}</strong>
+                </div>`;
+                });
+            }
+
+            let owedToYouHTML = '';
+            if (Object.keys(owedToYouDetails).length === 0) {
+                owedToYouHTML = '<div style="padding:8px 0; color:var(--text-secondary);">Chưa ai nợ bạn.</div>';
+            } else {
+                Object.keys(owedToYouDetails).forEach(name => {
+                    const u = USERS.find(x => x.name === name);
+                    const av = u ? u.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                    owedToYouHTML += `<div class="debt-row">
+                    <img src="${av}" class="debt-row-avatar">
+                    <span class="debt-row-name">${name}</span>
+                    <strong class="debt-row-amount" style="color:var(--primary);">${fmtMoney(Math.round(owedToYouDetails[name]))}</strong>
+                </div>`;
+                });
+            }
+
+            container.innerHTML = `
+        <div style="padding: 0.5rem 0 2rem;">
+            <!-- Welcome Card -->
+            <div class="welcome-card">
+                <div style="display:flex; align-items:center; gap:14px; margin-bottom:18px; position:relative; z-index:1;">
+                    <img src="${userAvatar}" style="width:52px; height:52px; border-radius:50%; object-fit:cover; border:3px solid var(--accent); box-shadow: 0 0 0 4px var(--accent-bg);">
+                    <div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Xin chào,</div>
+                        <div style="font-size:1.5rem; font-weight:800; color:white; letter-spacing:-0.02em;">${userName} 👋</div>
+                    </div>
+                </div>
+                <div class="stats-grid" style="position:relative; z-index:1;">
+                    <div class="stat-card stat-card-danger">
+                        <div class="stat-label">📤 Bạn đang nợ</div>
+                        <div class="stat-value" style="color:var(--danger);">${totalYouOwe > 0 ? fmtMoney(Math.round(totalYouOwe)) : '0đ'}</div>
+                        <div class="stat-sub">${unpaidBillCount} khoản chưa trả</div>
+                    </div>
+                    <div class="stat-card stat-card-primary">
+                        <div class="stat-label">📥 Được nợ</div>
+                        <div class="stat-value" style="color:var(--primary);">${totalOwedToYou > 0 ? fmtMoney(Math.round(totalOwedToYou)) : '0đ'}</div>
+                        <div class="stat-sub">${Object.keys(owedToYouDetails).length} người</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bạn đang nợ -->
+            <div class="dashboard-card">
+                <h3><i data-lucide="trending-up" style="color:var(--danger); width:18px;"></i> Bạn cần trả</h3>
+                ${youOweHTML}
+            </div>
+
+            <!-- Người khác nợ bạn -->
+            <div class="dashboard-card">
+                <h3><i data-lucide="trending-down" style="color:var(--primary); width:18px;"></i> Người khác nợ bạn</h3>
+                ${owedToYouHTML}
+            </div>
+
+            <!-- Bill mới nhất -->
+            ${latestBill ? `
+            <div class="dashboard-card">
+                <h3><i data-lucide="receipt" style="color:var(--accent); width:18px;"></i> Bill mới nhất</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:600; font-size:1.05rem;">${latestBill.title || 'Không tên'}</div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">${new Date(parseInt(sortedKeys[0])).toLocaleDateString('vi-VN')}</div>
+                    </div>
+                    <div style="font-weight:700; font-size:1.2rem; color:var(--accent);">${fmtMoney(latestBillTotal)}</div>
+                </div>
+            </div>` : ''}
+
+            <!-- Biểu đồ Chi tiêu -->
+            <div id="dashboard-chart-section"></div>
+        </div>`;
+
+            // Render biểu đồ: Tổng tiền ĐÃ TIÊU (phần được hưởng) của người dùng
+            const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+            const spendingByBill = [];
+            let userGrandTotal = 0;
+
+            for (const hId in allHistory) {
+                const record = allHistory[hId];
+                if (!record || !record.data) continue;
+                const items = Array.isArray(record.data) ? record.data : Object.values(record.data);
+                let billTotal = 0;
+                items.forEach(item => {
+                    if (!item) return;
+                    const amount = parseInputToNumber(item.amount);
+                    const bens = (item.bens || []).filter(b => b.checked);
+                    if (bens.length === 0) return;
+                    // Tìm phần của user trong khoản chi này
+                    const ben = bens.find(b => b.name === userName);
+                    if (!ben) return;
+                    const totalOwn = bens.reduce((s, b) => s + parseInputToNumber(b.part), 0);
+                    const remain = Math.max(amount - totalOwn, 0);
+                    const share = remain / bens.length;
+                    const myShare = parseInputToNumber(ben.part) + share;
+                    billTotal += myShare;
+                });
+                if (billTotal > 0) {
+                    spendingByBill.push({ title: record.title || 'Không tên', amount: billTotal, id: hId });
+                    userGrandTotal += billTotal;
+                }
+            }
+            spendingByBill.sort((a, b) => b.id - a.id);
+
+            const chartContainer = container.querySelector('#dashboard-chart-section');
+            if (userGrandTotal > 0 && chartContainer) {
+                const maxSpend = Math.max(...spendingByBill.map(b => b.amount));
+
+                let barsHTML = '';
+                spendingByBill.forEach((bill, idx) => {
+                    const pct = Math.round((bill.amount / maxSpend) * 100);
+                    const color = chartColors[idx % chartColors.length];
+                    const sharePercent = Math.round((bill.amount / userGrandTotal) * 100);
+
+                    barsHTML += `
+                <div style="margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                        <span style="font-weight:500; font-size:0.9rem;">${bill.title}</span>
+                        <span style="font-weight:700; font-size:0.9rem; color:${color};">${fmtMoney(Math.round(bill.amount))} <small style="color:var(--text-secondary); font-weight:400;">(${sharePercent}%)</small></span>
+                    </div>
+                    <div style="background:var(--input-bg); border-radius:6px; height:10px; overflow:hidden;">
+                        <div style="height:100%; width:${pct}%; background:${color}; border-radius:6px; transition:width 0.8s ease-out;"></div>
+                    </div>
+                </div>`;
+                });
+
+                chartContainer.innerHTML = `
+            <div class="dashboard-card">
+                <h3>
+                    <i data-lucide="bar-chart-3" style="color:var(--accent); width:18px;"></i> 
+                    Bạn đã chi tiêu
+                    <span style="margin-left:auto; font-size:0.85rem; color:var(--accent); font-weight:700;">${fmtMoney(userGrandTotal)}</span>
+                </h3>
+                ${barsHTML}
+            </div>`;
+            }
+
+            // Biểu đồ Tổng chi tiêu TOÀN HỆ THỐNG
+            const spendingByUser = {};
+            let systemTotal = 0;
+            for (const hId in allHistory) {
+                const record = allHistory[hId];
+                if (!record || !record.data) continue;
+                const items = Array.isArray(record.data) ? record.data : Object.values(record.data);
+                items.forEach(item => {
+                    if (!item || !item.payer) return;
+                    const amt = parseInputToNumber(item.amount);
+                    spendingByUser[item.payer] = (spendingByUser[item.payer] || 0) + amt;
+                    systemTotal += amt;
+                });
+            }
+
+            if (systemTotal > 0) {
+                const maxSpend = Math.max(...Object.values(spendingByUser));
+                const sortedUsers = Object.entries(spendingByUser).sort((a, b) => b[1] - a[1]);
+
+                let systemBarsHTML = '';
+                sortedUsers.forEach(([name, amount], idx) => {
+                    const pct = Math.round((amount / maxSpend) * 100);
+                    const color = chartColors[idx % chartColors.length];
+                    const userObj = USERS.find(u => u.name === name);
+                    const av = userObj ? userObj.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                    const sharePercent = Math.round((amount / systemTotal) * 100);
+
+                    systemBarsHTML += `
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <img src="${av}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                            <span style="font-weight:600; font-size:0.9rem;">${name}</span>
+                            <span style="font-weight:700; font-size:0.9rem; color:${color};">${fmtMoney(Math.round(amount))} <small style="color:var(--text-secondary); font-weight:400;">(${sharePercent}%)</small></span>
+                        </div>
+                        <div style="background:var(--input-bg); border-radius:6px; height:10px; overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:${color}; border-radius:6px; transition:width 0.8s ease-out;"></div>
+                        </div>
+                    </div>
+                </div>`;
+                });
+
+                const systemDiv = document.createElement('div');
+                systemDiv.style.marginTop = '12px';
+                systemDiv.innerHTML = `
+            <div class="dashboard-card">
+                <h3>
+                    <i data-lucide="users" style="color:var(--primary); width:18px;"></i> 
+                    Tổng chi tiêu toàn hệ thống
+                    <span style="margin-left:auto; font-size:0.85rem; color:var(--primary); font-weight:700;">${fmtMoney(systemTotal)}</span>
+                </h3>
+                ${systemBarsHTML}
+            </div>`;
+                container.querySelector('#dashboard-chart-section').after(systemDiv);
+            }
+
+            lucide.createIcons();
+        }
+
+        // === UNSEEN EXPENSE TICKER (ĐÃ BỎ THEO YÊU CẦU) ===
+        async function renderUnseenTicker(userName) {
+            // Feature removed
+        }
+
+        function initializeAppView(userName) {
+            document.title = `FinSplit - ${userName}`;
+            const user = USERS.find(u => u.name === userName);
+            const userSwitcher = document.getElementById('user-switcher');
+            if (user) userSwitcher.innerHTML = `<img src="${user.avatar}" alt="${user.name}" class="avatar-sm">`;
+            userSwitcher.addEventListener('click', () => { localStorage.removeItem('currentUser'); window.location.reload(); });
+            updateDebtNotification(userName);
+            
+            const pageContent = document.getElementById('page-content');
+            function updateActiveNav(targetId) {
+                document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                const activeEl = document.getElementById(targetId);
+                if (activeEl) activeEl.classList.add('active');
+            }
+            async function navigateTo(pageId, isInitialLoad = false) {
+                if (!isInitialLoad) window.scrollTo(0, 0);
+                if (!isInitialLoad && pageId !== 'nav-view-debt' && pageId !== 'nav-history') {
+                    pageContent.innerHTML = '<div class="loading-spinner"></div>';
+                }
+                updateActiveNav(pageId);
+                let options = {};
+                switch (pageId) {
+                    case 'nav-home':
+                        await renderDashboard(pageContent, userName);
+                        break;
+                    case 'nav-add-expense':
+                        options = { editUser: userName };
+                        await renderDetailPage(pageContent, options);
+                        break;
+                    case 'nav-view-total':
+                        options = { isViewMode: true, viewerUser: userName };
+                        await renderDetailPage(pageContent, options);
+                        break;
+                    case 'nav-view-debt':
+                        renderIframePage(pageContent, `tonghop_thanhtoan.html?payer=${userName}`);
+                        break;
+                    case 'nav-history':
+                        renderIframePage(pageContent, 'history.html');
+                        break;
+                }
+                if (pageId !== 'nav-view-debt' && pageId !== 'nav-history') {
+                    lucide.createIcons();
+                }
+            }
+            document.getElementById('nav-home').addEventListener('click', (e) => { e.preventDefault(); navigateTo('nav-home'); });
+            document.getElementById('nav-add-expense').addEventListener('click', (e) => { e.preventDefault(); navigateTo('nav-add-expense'); });
+            document.getElementById('nav-view-total').addEventListener('click', (e) => { e.preventDefault(); navigateTo('nav-view-total'); });
+            document.getElementById('nav-view-debt').addEventListener('click', (e) => { e.preventDefault(); navigateTo('nav-view-debt'); });
+            document.getElementById('nav-history').addEventListener('click', (e) => { e.preventDefault(); navigateTo('nav-history'); });
+            navigateTo('nav-home', true);
+        }
+
+        async function renderDetailPage(container, options = {}, targetHistoryId = null) {
+            // 1. Lấy toàn bộ dữ liệu để kiểm tra
+            const [snapshot, paidSnap] = await Promise.all([
+                get(ref(db, 'history')),
+                get(ref(db, 'paidList'))
+            ]);
+
+            if (!snapshot.exists()) { container.innerHTML = '<div class="placeholder-content"><p>Chưa có lịch sử nào được tạo!</p></div>'; return; }
+            const allHistoryData = snapshot.val();
+            const paidList = paidSnap.exists() ? paidSnap.val() : {};
+
+            const sortedKeys = Object.keys(allHistoryData).sort((a, b) => b - a);
+            let historyIdToLoad = targetHistoryId || sortedKeys[0]; // Mặc định lấy mới nhất
+
+            // --- [LOGIC MỚI] TỰ ĐỘNG TẠO BILL THEO THÁNG ---
+            // Chỉ chạy logic này khi:
+            // 1. Đang ở chế độ nhập liệu (không phải View Mode)
+            // 2. Đang cố gắng load bill mới nhất (không phải chọn cụ thể từ lịch sử)
+            if (!options.isViewMode && !targetHistoryId) {
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                // Tìm bill thuộc tháng hiện tại
+                let currentMonthBillId = null;
+                for (const key of sortedKeys) {
+                    const d = new Date(parseInt(key));
+                    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                        currentMonthBillId = key;
+                        break;
+                    }
+                }
+
+                if (currentMonthBillId) {
+                    // Đã có bill tháng này → dùng luôn
+                    historyIdToLoad = currentMonthBillId;
+                } else {
+                    // Chưa có bill tháng này → tạo mới (bill trống)
+                    const monthLabel = `Bill Tháng ${currentMonth + 1}/${currentYear}`;
+                    const newKey = Date.now().toString();
+
+                    const newRecord = {
+                        title: monthLabel,
+                        createdAt: newKey,
+                        totalExpense: 0,
+                        data: []
+                    };
+
+                    await set(ref(db, `history/${newKey}`), newRecord);
+                    allHistoryData[newKey] = newRecord;
+                    historyIdToLoad = newKey;
+
+                    const toast = document.createElement('div');
+                    toast.className = 'toast-notification';
+                    toast.innerHTML = `<i data-lucide="info"></i> Tháng mới! Đã tạo ${monthLabel}`;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 5000);
+                }
+            }
+            // -------------------------------------------------------------
+
+            const template = document.getElementById('detail-view-template');
+            const clone = template.content.cloneNode(true);
+            container.innerHTML = '';
+            container.appendChild(clone);
+            await initializeDetailView(container, allHistoryData, historyIdToLoad, options);
+        }
+
+        async function updateDebtNotification(userName) { const allHistoryData = await get(ref(db, 'history')).then(snapshot => snapshot.val() || {}); const paidStatus = await get(ref(db, 'paidList')).then(snapshot => snapshot.val() || {}); let notificationCount = 0; for (const historyId in allHistoryData) { const record = allHistoryData[historyId]; if (!record.data) continue; const debtsInHistory = calculateDebtForHistory(record.data); for (const receiver in debtsInHistory) { for (const payer in debtsInHistory[receiver]) { if (payer === userName) { const paymentId = `${historyId}__${normalizeName(payer)}__${normalizeName(receiver)}`; if (!paidStatus[paymentId]) { notificationCount++; } } } } } const badge = document.querySelector('#app-container .notification-badge'); if (notificationCount > 0) { badge.textContent = notificationCount; badge.style.display = 'flex'; } else { badge.style.display = 'none'; } }
+
+        async function initializeDetailView(container, allHistoryData, currentHistoryId, options = {}) {
+            const { editUser, isViewMode, viewerUser } = options;
+            if (!container.querySelector('.detail-view-wrapper')) return;
+            const groupsEl = container.querySelector('#groups');
+            const resultEl = container.querySelector('#result');
+            const totalEl = container.querySelector('#total');
+            let paidStatus = {};
+            const historySelectorWrapper = container.querySelector('#history-selector-wrapper');
+            const historySelector = document.createElement('select');
+            historySelector.id = 'historySelector';
+            historySelector.className = 'history-selector';
+            const sortedKeys = Object.keys(allHistoryData).sort((a, b) => b - a);
+            sortedKeys.forEach(key => {
+                const history = allHistoryData[key];
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = history.title || `Lịch sử ngày ${new Date(parseInt(key)).toLocaleDateString('vi-VN')}`;
+                if (key === currentHistoryId) { option.selected = true; }
+                historySelector.appendChild(option);
+            });
+            historySelectorWrapper.innerHTML = '';
+            historySelectorWrapper.appendChild(historySelector);
+            historySelector.addEventListener('change', async (e) => {
+                const newHistoryId = e.target.value;
+                await renderDetailPage(container, options, newHistoryId);
+                lucide.createIcons();
+            });
+
+            // --- HÀM RENDER DATA ---
+            // --- HÀM RENDER DATA (GOM NHÓM THÁNG → NGÀY) ---
+            
+            // Helper: lấy key ngày (YYYY-MM-DD) từ date string
+            const getDateKey = (dateStr) => {
+                if (!dateStr) return 'unknown';
+                const d = new Date(dateStr);
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            };
+            // Helper: lấy key tháng (YYYY-MM)
+            const getMonthKey = (dateStr) => {
+                if (!dateStr) return 'unknown';
+                const d = new Date(dateStr);
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+            };
+            // Helper: format nhãn tháng
+            const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+            const formatMonthLabel = (dateStr) => {
+                if (!dateStr || dateStr === 'unknown') return '📆 Không rõ tháng';
+                const d = new Date(dateStr);
+                const now = new Date();
+                const isThisMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                return `📆 ${monthNames[d.getMonth()]}/${d.getFullYear()}${isThisMonth ? ' • Tháng này' : ''}`;
+            };
+            // Helper: format nhãn ngày đẹp
+            const formatDateGroupLabel = (dateStr) => {
+                if (!dateStr || dateStr === 'unknown') return '📅 Không rõ ngày';
+                const d = new Date(dateStr);
+                const dayNames = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+                const dayName = dayNames[d.getDay()];
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const today = new Date();
+                const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+                const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+                const itemKey = getDateKey(dateStr);
+                let badge = '';
+                if (itemKey === todayKey) badge = ' • Hôm nay';
+                else if (itemKey === yesterdayKey) badge = ' • Hôm qua';
+                return `${dayName}, ${day}/${month}${badge}`;
+            };
+
+            function renderData(data) {
+                container.querySelectorAll('.group .rows').forEach(rows => rows.innerHTML = '');
+                if (!data) return;
+
+                // Sắp xếp theo ngày tháng tăng dần
+                const sortedData = [...data].sort((a, b) => {
+                    const dateA = a.date ? new Date(a.date).getTime() : 0;
+                    const dateB = b.date ? new Date(b.date).getTime() : 0;
+                    return dateA - dateB;
+                });
+
+                // Track tháng + ngày cuối cùng đã render cho mỗi nhóm người
+                const lastMonthPerGroup = {};
+                const lastDatePerGroup = {};
+
+                sortedData.forEach(item => {
+                    if (!item || !item.payer) return;
+
+                    const itemMonthKey = getMonthKey(item.date);
+                    const itemDateKey = getDateKey(item.date);
+                    const g = container.querySelector(`.group[data-name="${item.payer}"]`);
+                    if (!g) return;
+                    const rows = g.querySelector('.rows');
+
+                    let currentMonthContainer;
+                    // === NHÓM THÁNG: chèn month header nếu tháng thay đổi ===
+                    if (lastMonthPerGroup[item.payer] !== itemMonthKey) {
+                        lastMonthPerGroup[item.payer] = itemMonthKey;
+                        lastDatePerGroup[item.payer] = null; // reset ngày khi đổi tháng
+                        
+                        currentMonthContainer = document.createElement('div');
+                        currentMonthContainer.className = 'month-group-container';
+                        
+                        const monthSep = document.createElement('div');
+                        monthSep.className = 'month-group-separator';
+                        monthSep.innerHTML = `<span>${formatMonthLabel(item.date)}</span>`;
+                        currentMonthContainer.appendChild(monthSep);
+                        
+                        rows.appendChild(currentMonthContainer);
+                    } else {
+                        // Lấy month container cuối cùng
+                        const children = rows.children;
+                        for (let i = children.length - 1; i >= 0; i--) {
+                            if (children[i].classList.contains('month-group-container')) {
+                                currentMonthContainer = children[i];
+                                break;
+                            }
+                        }
+                    }
+
+                    // === NHÓM NGÀY (trong tháng): chèn day header nếu ngày thay đổi ===
+                    let currentDayContainer;
+                    if (lastDatePerGroup[item.payer] !== itemDateKey) {
+                        lastDatePerGroup[item.payer] = itemDateKey;
+                        
+                        currentDayContainer = document.createElement('div');
+                        currentDayContainer.className = 'day-group-container';
+                        
+                        const daySep = document.createElement('div');
+                        daySep.className = 'date-group-separator';
+                        daySep.innerHTML = `<span>📅 ${formatDateGroupLabel(item.date)}</span>`;
+                        
+                        currentDayContainer.appendChild(daySep);
+                        
+                        if (currentMonthContainer) {
+                            currentMonthContainer.appendChild(currentDayContainer);
+                        } else {
+                            rows.appendChild(currentDayContainer);
+                        }
+                    } else {
+                        // Lấy day container cuối cùng để đưa dòng này vào
+                        const parentToSearch = currentMonthContainer || rows;
+                        const children = parentToSearch.children;
+                        for (let i = children.length - 1; i >= 0; i--) {
+                            if (children[i].classList.contains('day-group-container')) {
+                                currentDayContainer = children[i];
+                                break;
+                            }
+                        }
+                    }
+
+                    // 1. Tạo dòng mới (mặc định là ngày giờ hiện tại)
+                    const rowContainer = addLineToGroup(item.payer);
+                    if (item.id) { rowContainer.dataset.id = item.id; }
+                    
+                    // Đưa row vào trong dayContainer để gom nhóm nền
+                    if (currentDayContainer) {
+                        currentDayContainer.appendChild(rowContainer);
+                    }
+
+                    // 2. Điền lại số tiền và ghi chú cũ
+                    rowContainer.querySelector('.amount').value = item.amount;
+                    rowContainer.querySelector('.note').value = item.note || '';
+
+                    // 3. [QUAN TRỌNG] Điền lại ngày tháng đã lưu
+                    const dateInput = rowContainer.querySelector('.expense-date');
+                    const dateDisplay = rowContainer.querySelector('.date-display');
+
+                    if (item.date) {
+                        // Gán giá trị cho ô input ẩn
+                        dateInput.value = item.date;
+                        // Cập nhật dòng chữ hiển thị bên ngoài
+                        dateDisplay.textContent = formatDisplayDate(item.date);
+                    }
+
+                    // Trước khi render thông tin người chia cũ, uncheck tất cả để người dùng mới không bị tích vào bill cũ
+                    rowContainer.querySelectorAll('.ben-cb').forEach(cb => cb.checked = false);
+
+                    // 4. Điền lại thông tin người chia tiền
+                    if (item.bens) {
+                        item.bens.forEach(b => {
+                            const el = Array.from(rowContainer.querySelectorAll('.benef')).find(x => x.querySelector('.ben-cb').dataset.name === b.name);
+                            if (el) {
+                                el.querySelector('.ben-cb').checked = b.checked;
+                                el.querySelector('.part').value = b.part || '';
+                                if (b.guestCount) el.querySelector('.ben-guest-count').textContent = b.guestCount;
+                            }
+                        });
+                    }
+
+                    // Kích hoạt lại sự kiện tính toán để số liệu nhảy đúng
+                    rowContainer.querySelector('.amount').dispatchEvent(new Event('input'));
+
+
+                });
+
+                lucide.createIcons();
+            }
+
+            // View mode: hiện TẤT CẢ users (kể cả deleted) để bill cũ render đúng
+            // Edit mode: chỉ hiện users active
+            const namesList = isViewMode ? ALL_NAMES : NAMES;
+
+            namesList.forEach(name => {
+                const g = document.createElement('div'); g.className = 'group'; g.dataset.name = name;
+                const userObj = USERS.find(u => u.name === name);
+                const userAvatar = userObj ? userObj.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+
+                if (isViewMode) {
+                    // VIEW MODE: Tạo accordion group với avatar
+                    g.innerHTML = `<div class="group-header" style="display:flex; align-items:center; gap:10px; padding:10px; background:var(--card-bg); border:1px solid var(--border); border-radius:var(--radius); cursor:pointer; margin-bottom:4px; transition:all 0.2s;">
+                    <img src="${userAvatar}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:1.15rem;">${name}</div>
+                        <div class="group-summary" style="font-size:0.95rem; color:var(--primary); font-weight:600; margin-top:2px;"></div>
+                    </div>
+                    <i data-lucide="chevron-down" class="group-toggle-icon" style="transition:transform 0.3s;"></i>
+                </div>
+                <div class="rows" style="display:none;"></div>`;
+                    // Click header to toggle
+                    g.querySelector('.group-header').addEventListener('click', () => {
+                        const rows = g.querySelector('.rows');
+                        const icon = g.querySelector('.group-toggle-icon');
+                        const isOpen = rows.style.display !== 'none';
+                        rows.style.display = isOpen ? 'none' : 'block';
+                        icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                    });
+                } else {
+                    // EDIT MODE: Giữ nguyên như cũ
+                    g.innerHTML = `<h3>${name}</h3><div class="rows"></div><div class="add-line-wrap"><button class="add-line"><i data-lucide="plus"></i> Thêm dòng chi tiêu</button></div>`;
+                    g.querySelector('.add-line').addEventListener('click', () => { addLineToGroup(g.dataset.name); lucide.createIcons(); });
+                }
+                groupsEl.appendChild(g);
+            });
+
+            // --- HÀM ADD LINE ---
+            function addLineToGroup(groupName) {
+                const g = container.querySelector(`.group[data-name="${groupName}"]`);
+                const rows = g.querySelector('.rows');
+                const inputCard = document.createElement('div');
+                inputCard.className = 'input-card is-new';
+                inputCard.dataset.id = Date.now() + Math.random().toString().slice(2, 6);
+                setTimeout(() => inputCard.classList.remove('is-new'), 500);
+
+                let benefsHTML = '';
+                // View mode: hiện tất cả users (kể cả deleted) cho bill cũ
+                // Edit mode: chỉ hiện users active
+                const benefNamesList = isViewMode ? ALL_NAMES : NAMES;
+                benefNamesList.forEach(n => {
+                    benefsHTML += ` 
+                <div class="benef" style="display:flex; flex-direction:column; gap:8px; padding:10px 8px; border-bottom:1px solid color-mix(in srgb, var(--border) 40%, transparent); background:transparent;"> 
+                    <!-- Tầng 1: Tích, Tên, Tiền riêng, Số tiền -->
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" checked class="ben-cb" data-name="${n}" style="width:20px; height:20px; cursor:pointer; margin:0; flex-shrink:0;"> 
+                        <span style="font-weight:700; font-size:1.05rem; color:var(--text-primary); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${n}</span> 
+                        
+                        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                            <input type="text" placeholder="Tiền riêng" value="" class="part" inputmode="numeric" style="width:95px; text-align:right; border:1px solid var(--border); border-radius:6px; background:var(--bg-elevated); font-weight:500; font-size:14px; outline:none; color:var(--text-primary); padding:4px 6px;">
+                            <div class="share-info" style="min-width:65px; text-align:right; font-size:1rem; font-weight:800; color:var(--primary); line-height:1;"></div> 
+                        </div>
+                    </div>
+
+                    <!-- Tầng 2: Ô khách -->
+                    <div class="ben-guest-wrap" style="display:flex; align-items:center; gap:8px; background:var(--input-bg); padding:6px 12px; border-radius:10px; border:1px solid color-mix(in srgb, var(--border) 20%, transparent); margin-left:28px;">
+                        <div style="display:flex; align-items:center; gap:6px; color:var(--accent); flex:1;">
+                            <i data-lucide="user-plus" style="width:14px;"></i>
+                            <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">Khách ngoài:</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <button type="button" class="ben-guest-minus" style="width:26px; height:26px; border-radius:50%; border:1.5px solid var(--border); background:var(--input-bg); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.15s;"><i data-lucide="minus" style="width:12px; color:var(--text-secondary);"></i></button>
+                            <span class="ben-guest-count" style="font-size:1.1rem; font-weight:800; color:var(--accent); min-width:20px; text-align:center;">0</span>
+                            <button type="button" class="ben-guest-plus" style="width:26px; height:26px; border-radius:50%; border:none; background:var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 6px rgba(99,102,241,0.3); transition:all 0.15s;"><i data-lucide="plus" style="width:12px; color:white;"></i></button>
+                        </div>
+                    </div>
+                </div> `;
+                });
+
+                const currentISO = getNowISO();
+
+                inputCard.innerHTML = ` 
+            <div class="date-input-wrap" style="display:flex; justify-content:space-between; align-items:center;">
+                 <span class="date-display">${formatDisplayDate(currentISO)}</span>
+                 <button class="del-btn" type="button" style="padding:6px; margin:0; background:var(--danger-bg); border-radius:var(--radius-sm); position:relative; z-index:11;" title="Xóa dòng chi tiêu"><i data-lucide="trash-2" style="color:var(--danger); width:16px;"></i></button>
+                 <input type="datetime-local" class="expense-date" value="${currentISO}">
+            </div>
+            <div class="input-card-main" style="display:flex; align-items:flex-start; gap:10px;"> 
+                <div class="amount-wrap" style="flex:1; min-width:0;"> 
+                    <input class="amount" placeholder="0" inputmode="numeric" style="font-size:2.2rem; font-weight:800; padding:14px 16px; width:100%; text-align:left; border:2px solid var(--border); background:var(--input-bg); border-radius:var(--radius); color:var(--primary); letter-spacing:-0.02em; transition:all 0.25s;" onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px var(--primary-bg-strong)';this.style.background='var(--bg-elevated)'" onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none';this.style.background='var(--input-bg)'"> 
+                    <div class="formatted" style="text-align:left; font-weight:600; margin-top:6px; font-size:0.9rem; color:var(--text-secondary);">Nhập số tiền</div> 
+                </div>
+                <button class="details-toggle" type="button" title="Nhập tiền riêng" style="padding:14px 14px; font-size:0.85rem; border-radius:var(--radius); border:1.5px solid var(--accent); background:var(--accent-bg); font-weight:600; white-space:nowrap; flex-shrink:0; color:var(--accent); margin-top:2px;"> 
+                    <i data-lucide="settings-2" style="width:14px;"></i> Tiền riêng
+                </button>
+            </div> 
+            <textarea class="note" placeholder="✏️ Ghi chú khoản chi..." style="border:none; border-bottom:1.5px dashed var(--border); background:transparent; font-size:1.6rem; font-weight:500; padding:10px 4px; width:100%; resize:none; outline:none; box-shadow:none; margin-top:10px; color:var(--text-primary);" rows="1"></textarea> 
+            
+            <div style="margin-top:14px;">
+                <div class="quick-avatars" style="display:flex; gap:8px; overflow-x:auto; padding:6px 4px 8px 4px; align-items:center; flex-wrap:nowrap; scrollbar-width:none; -ms-overflow-style:none;"></div>
+            </div>
+
+            <div class="smart-helper-text" style="font-size:1.1rem; padding:12px; margin-top:14px; border-radius:var(--radius-sm); text-align:center; transition:all 0.3s; font-weight:600;"></div>
+
+            <div class="input-card-details"> 
+                <div style="min-height:0;">
+                    <div class="benefs">${benefsHTML}</div> 
+                </div>
+            </div> `;
+
+                rows.appendChild(inputCard);
+
+                inputCard.querySelector('.benefs').addEventListener('click', (e) => {
+                    const btn = e.target.closest('.ben-guest-plus, .ben-guest-minus');
+                    if (btn) {
+                        const span = btn.parentElement.querySelector('.ben-guest-count');
+                        let count = parseInt(span.textContent) || 0;
+                        if (btn.classList.contains('ben-guest-plus')) count++;
+                        else if (count > 0) count--;
+                        span.textContent = count;
+                        updateShares(inputCard);
+                    }
+                });
+
+                const noteText = inputCard.querySelector('.note');
+                noteText.addEventListener('input', function () {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+
+                const dateInput = inputCard.querySelector('.expense-date');
+                const dateDisplay = inputCard.querySelector('.date-display');
+                dateInput.addEventListener('change', (e) => {
+                    dateDisplay.textContent = formatDisplayDate(e.target.value);
+                });
+                dateInput.addEventListener('click', function (e) { try { this.showPicker(); } catch (err) { } });
+
+                const amt = inputCard.querySelector('.amount');
+                const fmt = inputCard.querySelector('.formatted');
+
+                function updateShares(inputCard) {
+                    const amount = parseInputToNumber(inputCard.querySelector('.amount').value);
+                    const checkedBens = Array.from(inputCard.querySelectorAll('.benef')).filter(b => b.querySelector('.ben-cb').checked);
+                    const totalOwn = Array.from(inputCard.querySelectorAll('.benef')).reduce((s, b) => s + parseInputToNumber(b.querySelector('.part').value), 0);
+                    const remain = Math.max(amount - totalOwn, 0);
+                    
+                    const totalGuests = Array.from(inputCard.querySelectorAll('.ben-guest-count')).reduce((s, span) => s + (parseInt(span.textContent) || 0), 0);
+                    const totalParts = checkedBens.length + totalGuests;
+                    const share = totalParts > 0 ? remain / totalParts : 0;
+
+                    inputCard.querySelectorAll('.benef').forEach(b => {
+                        const own = parseInputToNumber(b.querySelector('.part').value);
+                        const checked = b.querySelector('.ben-cb').checked;
+                        const guestCount = parseInt(b.querySelector('.ben-guest-count').textContent) || 0;
+                        const guestPriceEl = b.querySelector('.ben-guest-price');
+                        const guestTooltip = b.querySelector('.guest-tooltip');
+                        
+                        let totalForThisPerson = 0;
+                        if (checked) totalForThisPerson += share + own;
+                        if (guestCount > 0) {
+                            totalForThisPerson += share * guestCount;
+                            if (guestPriceEl) {
+                                guestPriceEl.textContent = `${fmtMoney(Math.round(share))}/suất`;
+                                guestPriceEl.style.display = 'block';
+                            }
+                            if (guestTooltip) guestTooltip.style.display = 'block';
+                        } else {
+                            if (guestPriceEl) guestPriceEl.style.display = 'none';
+                            if (guestTooltip) guestTooltip.style.display = 'none';
+                        }
+
+                        const info = b.querySelector('.share-info');
+                        info.textContent = totalForThisPerson > 0 ? `${fmtMoney(Math.round(totalForThisPerson))}` : '';
+                        
+                        // Đổi màu nếu có khách
+                        if (guestCount > 0) {
+                            info.style.color = 'var(--warning)';
+                            info.style.fontWeight = '700';
+                        } else {
+                            info.style.color = 'var(--primary)';
+                            info.style.fontWeight = '600';
+                        }
+                    });
+
+                    const helperText = inputCard.querySelector('.smart-helper-text');
+                    if (helperText) {
+                        if (amount === 0) {
+                            helperText.innerHTML = "Nhập số tiền để bắt đầu chia";
+                            helperText.style.color = "var(--text-secondary)";
+                            helperText.style.background = "transparent";
+                        } else if (checkedBens.length === 0 && totalGuests === 0) {
+                            helperText.innerHTML = "⚠️ Chưa chọn người để chia tiền!";
+                            helperText.style.color = "var(--danger)";
+                            helperText.style.background = "rgba(239, 68, 68, 0.1)";
+                        } else {
+                            helperText.style.background = "rgba(16, 185, 129, 0.1)";
+                            const customPayersCount = Array.from(inputCard.querySelectorAll('.benef')).filter(b => parseInputToNumber(b.querySelector('.part').value) > 0).length;
+                            const gHtml = totalGuests > 0 ? ` và ${totalGuests} khách` : ``;
+                            if (customPayersCount === 0) {
+                                helperText.style.color = "var(--primary)";
+                                helperText.innerHTML = `Đang chia đều cho <strong>${checkedBens.length} người${gHtml}</strong> (${fmtMoney(Math.round(share))}/suất)`;
+                            } else {
+                                if (share > 0) {
+                                    helperText.style.color = "var(--accent)";
+                                    helperText.innerHTML = `<strong>${customPayersCount} người</strong> trả riêng, chia cho <strong>${checkedBens.length} người${gHtml}</strong> (${fmtMoney(Math.round(share))}/suất)`;
+                                } else {
+                                    helperText.style.color = "var(--text-primary)";
+                                    helperText.innerHTML = `Đã chia kín số tiền này bằng Tiền riêng`;
+                                }
+                            }
+                        }
+                    }
+
+                    const quickAvatarsContainer = inputCard.querySelector('.quick-avatars');
+                    if (quickAvatarsContainer && !inputCard.avatarsRendered) {
+                        let avHTML = '';
+                        benefNamesList.forEach(name => {
+                            const userObj = USERS.find(u => u.name === name);
+                            const av = userObj ? userObj.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                            avHTML += `<img src="${av}" title="${name}" data-name="${name}" class="avatar-toggle-btn" style="width:40px; height:40px; border-radius:50%; object-fit:cover; cursor:pointer; transition:all 0.2s; box-shadow:var(--shadow-sm);">`;
+                        });
+                        quickAvatarsContainer.innerHTML = avHTML;
+                        inputCard.avatarsRendered = true;
+                        quickAvatarsContainer.querySelectorAll('.avatar-toggle-btn').forEach(img => {
+                            img.addEventListener('click', (e) => {
+                                const name = e.target.dataset.name;
+                                const cb = Array.from(inputCard.querySelectorAll('.ben-cb')).find(el => el.dataset.name === name);
+                                if (cb) {
+                                    cb.checked = !cb.checked;
+                                    updateShares(inputCard);
+                                }
+                            });
+                        });
+                    }
+
+                    if (quickAvatarsContainer) {
+                        quickAvatarsContainer.querySelectorAll('.avatar-toggle-btn').forEach(img => {
+                            const name = img.dataset.name;
+                            const isChecked = checkedBens.some(b => b.querySelector('.ben-cb').dataset.name === name);
+                            img.style.opacity = isChecked ? '1' : '0.3';
+                            img.style.filter = isChecked ? 'none' : 'grayscale(100%)';
+                            img.style.border = isChecked ? '2.5px solid var(--accent)' : '2.5px solid transparent';
+                            img.style.boxShadow = isChecked ? '0 0 0 3px var(--accent-bg, rgba(99,102,241,0.15))' : 'var(--shadow-sm)';
+                        });
+                    }
+
+                    fmt.textContent = amount ? fmtMoney(amount) : 'Nhập số tiền';
+                }
+                // Tự động định dạng số có khoảng trắng khi nhập
+                const formatInputWithSpace = (e) => {
+                    let el = e.target;
+                    let val = el.value.replace(/[^0-9]/g, '');
+                    if (val) {
+                        let formatted = val.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                        if (el.value !== formatted) {
+                            let curr = el.selectionStart;
+                            let prevLen = el.value.length;
+                            el.value = formatted;
+                            let diff = el.value.length - prevLen;
+                            let newCurr = curr + diff;
+                            try { el.setSelectionRange(newCurr, newCurr); } catch(err){}
+                        }
+                    } else {
+                        el.value = '';
+                    }
+                };
+                amt.addEventListener('input', formatInputWithSpace);
+                inputCard.querySelectorAll('.part').forEach(el => el.addEventListener('input', formatInputWithSpace));
+
+                amt.addEventListener('input', () => updateShares(inputCard));
+                inputCard.querySelectorAll('.ben-cb, .part').forEach(el => el.addEventListener('input', () => updateShares(inputCard)));
+                inputCard.querySelector('.del-btn').addEventListener('click', () => {
+                    inputCard.classList.add('is-removing');
+                    setTimeout(() => inputCard.remove(), 300);
+                });
+                const detailsToggle = inputCard.querySelector('.details-toggle');
+                detailsToggle.addEventListener('click', function () {
+                    inputCard.classList.toggle('details-active');
+                });
+                updateShares(inputCard);
+                return inputCard;
+            }
+
+            // --- HÀM LẤY DỮ LIỆU ĐỂ LƯU ---
+            function getCurrentData() {
+                const data = [];
+                container.querySelectorAll('.input-card:not(.skeleton)').forEach(inputCard => {
+                    const group = inputCard.closest('.group');
+                    const payer = group.dataset.name;
+                    const amountEl = inputCard.querySelector('.amount');
+                    const noteEl = inputCard.querySelector('.note');
+                    const dateEl = inputCard.querySelector('.expense-date');
+
+                    if (amountEl && parseInputToNumber(amountEl.value) > 0) {
+                        data.push({
+                            id: inputCard.dataset.id,
+                            payer,
+                            amount: amountEl.value,
+                            note: noteEl ? noteEl.value : '',
+                            // Lưu giá trị ngày tháng (hoặc lấy giờ hiện tại nếu lỗi)
+                            date: dateEl ? dateEl.value : getNowISO(),
+                            bens: Array.from(inputCard.querySelectorAll('.benef')).map(b => ({
+                                name: b.querySelector('.ben-cb').dataset.name,
+                                checked: b.querySelector('.ben-cb').checked,
+                                part: b.querySelector('.part').value,
+                                guestCount: parseInt(b.querySelector('.ben-guest-count')?.textContent || 0)
+                            }))
+                        });
+                    }
+                });
+                return data;
+            }
+
+            async function calculate(doSave = true) {
+                window._offsetCache = {}; // Reset cache mỗi lần tính lại
+                resultEl.classList.remove('is-revealed'); totalEl.classList.remove('is-revealed'); resultEl.style.display = 'none'; totalEl.style.display = 'none';
+                const currentData = getCurrentData();
+                if (editUser && !isViewMode) {
+                    let userTotalSpent = 0; const receivables = {};
+                    currentData.forEach(item => { if (item.payer === editUser) { const amount = parseInputToNumber(item.amount); userTotalSpent += amount; const bens = item.bens.filter(b => b.checked); const totalOwn = bens.reduce((s, b) => s + parseInputToNumber(b.part), 0); const remain = Math.max(amount - totalOwn, 0); const totalGuests = item.bens.reduce((s, b) => s + (parseInt(b.guestCount) || 0), 0); const tParts = bens.length + totalGuests; const share = tParts > 0 ? remain / tParts : 0; item.bens.forEach(b => { if (b.checked || (parseInt(b.guestCount) > 0)) { if (b.name !== editUser) { const amountOwed = (b.checked ? (parseInputToNumber(b.part) + share) : 0) + (share * (parseInt(b.guestCount) || 0)); if (amountOwed > 0) receivables[b.name] = (receivables[b.name] || 0) + amountOwed; } } }); } });
+                    resultEl.innerHTML = ''; const table = document.createElement('div'); table.className = 'result-table'; let hasReceivables = false; Object.keys(receivables).forEach(payerName => { const amt = Math.round(receivables[payerName]); if (amt > 0) { hasReceivables = true; const col = document.createElement('div'); col.className = 'result-col'; col.innerHTML = `<div style="padding: 1.2rem;"><div class="receiver">${editUser} Nhận từ:</div><div class="transfer" style="justify-content: space-between;"><span>${payerName}:</span><span class="amount-red">${fmtMoney(amt)}</span></div></div>`; table.appendChild(col); } }); if (!hasReceivables) resultEl.innerHTML = '<p style="text-align:center;">Chưa có ai phải trả bạn.</p>'; else resultEl.appendChild(table); animateCounter(totalEl, userTotalSpent);
+                } else {
+                    let total = 0; const pair = {}; currentData.forEach(item => { const amount = parseInputToNumber(item.amount); total += amount; const bens = item.bens.filter(b => b.checked); const totalOwn = bens.reduce((s, b) => s + parseInputToNumber(b.part), 0); const remain = Math.max(amount - totalOwn, 0); const totalGuests = item.bens.reduce((s, b) => s + (parseInt(b.guestCount) || 0), 0); const tParts = bens.length + totalGuests; const share = tParts > 0 ? remain / tParts : 0; item.bens.forEach(b => { let pay = (b.checked ? (parseInputToNumber(b.part) + share) : 0); const gCount = parseInt(b.guestCount) || 0; if (gCount > 0) { pay += share * gCount; } if (pay > 0 && item.payer !== b.name) { pair[b.name + '|' + item.payer] = (pair[b.name + '|' + item.payer] || 0) + pay; } }); }); const net = {}; const done = new Set(); Object.keys(pair).forEach(k => { if (done.has(k)) return; const [f, t] = k.split('|'); const rev = t + '|' + f; const a = pair[k] || 0, b = pair[rev] || 0; if (a > b) { if (!net[t]) net[t] = {}; net[t][f] = a - b; } else if (b > a) { if (!net[f]) net[f] = {}; net[f][t] = b - a; } done.add(k); done.add(rev); });
+                    resultEl.innerHTML = '';
+                    const table = document.createElement('div'); table.className = 'result-table';
+                    namesList.forEach(p => {
+                        const userObj = USERS.find(u => u.name === p);
+                        const userAvatar = userObj ? userObj.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(p)}&background=random`;
+                        let payments = []; let hasPayments = false;
+                        Object.keys(net).forEach(rc => { if (net[rc]?.[p]) { const amt = Math.round(net[rc][p]); if (amt > 0) { hasPayments = true; const payId = `${currentHistoryId}__${normalizeName(p)}__${normalizeName(rc)}`; const isPaid = paidStatus[payId]; payments.push({ receiver: rc, amount: amt, isPaid, payId }); } } });
+
+                        // Tính toán offset động trước khi dựng giao diện để lấy được finalAmount chuẩn
+                        if (!window._offsetCache) window._offsetCache = {};
+                        if (!window._offsetCache[p]) {
+                            let _debts = []; let _credits = {};
+                            const _sortedIds = Object.keys(allHistoryData).sort((a, b) => a - b);
+                            _sortedIds.forEach(hId => {
+                                const rec = allHistoryData[hId];
+                                if (!rec || !rec.data) return;
+                                const dm = calculateDebtForHistory(rec.data);
+                                for (const rc in dm) {
+                                    if (dm[rc][p]) {
+                                        const amt = dm[rc][p];
+                                        const pid = `${hId}__${normalizeName(p)}__${normalizeName(rc)}`;
+                                        if (amt >= 100) _debts.push({ payId: pid, receiver: rc, amount: amt, finalAmount: amt, statusInDb: paidStatus[pid], notes: [] });
+                                    }
+                                }
+                                if (dm[p]) {
+                                    for (const debtor in dm[p]) {
+                                        const amt = dm[p][debtor];
+                                        const pid = `${hId}__${normalizeName(debtor)}__${normalizeName(p)}`;
+                                        if (amt >= 100 && paidStatus[pid] !== true) {
+                                            if (!_credits[debtor]) _credits[debtor] = [];
+                                            _credits[debtor].push({ title: rec.title || 'Không tên', amount: amt });
+                                        }
+                                    }
+                                }
+                            });
+                            _debts.forEach(d => {
+                                if (d.statusInDb === true) { d.finalAmount = 0; return; }
+                                if (_credits[d.receiver]) {
+                                    for (let i = 0; i < _credits[d.receiver].length; i++) {
+                                        let cr = _credits[d.receiver][i];
+                                        if (d.finalAmount <= 0) break;
+                                        if (cr.amount <= 0) continue;
+                                        const ded = Math.min(d.finalAmount, cr.amount);
+                                        d.finalAmount -= ded;
+                                        cr.amount -= ded;
+                                        d.notes.push({ text: `Trừ ${fmtMoney(Math.round(ded))} từ "${cr.title}" (${d.receiver} nợ ${p})`, amount: Math.round(ded), title: cr.title });
+                                    }
+                                }
+                            });
+                            const map = {};
+                            _debts.forEach(d => { map[d.payId] = { notes: d.notes, finalAmount: d.finalAmount }; });
+                            window._offsetCache[p] = map;
+                        }
+
+                        // Override finalAmount and isPaid for offset payments
+                        payments.forEach(pay => {
+                            if (window._offsetCache[p] && window._offsetCache[p][pay.payId]) {
+                                pay.finalAmount = window._offsetCache[p][pay.payId].finalAmount;
+                                pay.offsetNotes = window._offsetCache[p][pay.payId].notes;
+                                
+                                if (pay.isPaid === true) {
+                                    pay.finalAmount = 0;
+                                } else if (pay.finalAmount <= 0) {
+                                    pay.isPaid = 'offset'; // Gắn cờ ảo để UI biết là đã bù trừ 100%
+                                } else {
+                                    pay.isPaid = false; // Một phần hoặc không bù trừ
+                                }
+                            } else {
+                                pay.finalAmount = pay.isPaid === true ? 0 : pay.amount;
+                            }
+                        });
+
+                        const totalOwed = payments.reduce((s, x) => s + (x.isPaid ? 0 : x.finalAmount), 0);
+                        const allPaid = payments.length > 0 && payments.every(x => x.isPaid);
+
+                        // Tạo thẻ Accordion cho từng người
+                        const col = document.createElement('div'); col.className = 'result-col';
+                        col.style.cssText = 'cursor:pointer; transition:all 0.2s; padding:0; overflow:hidden;';
+
+                        // HEADER thẻ
+                        const header = document.createElement('div');
+                        header.style.cssText = 'display:flex; align-items:center; gap:10px; padding:12px;';
+                        header.innerHTML = `
+                        <img src="${userAvatar}" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border: 2px solid ${!hasPayments ? 'var(--primary)' : allPaid ? 'var(--primary)' : 'var(--danger)'}">
+                        <div style="flex:1;">
+                            <div style="font-weight:700; font-size:1.1rem;">${p}</div>
+                            <div style="font-size:0.85rem; color:var(--text-secondary);">
+                                ${!hasPayments ? '<span style="color:var(--primary)">Không nợ ai ✅</span>' : allPaid ? '<span style="color:var(--primary)">Đã trả hết ✅</span>' : `<span style="color:var(--danger); font-weight:600;">Cần trả: ${fmtMoney(totalOwed)}</span>`}
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-down" class="debt-toggle-icon" style="transition:transform 0.3s;"></i>
+                    `;
+                        col.appendChild(header);
+
+                        // DETAILS panel (mặc định ẩn)
+                        const details = document.createElement('div');
+                        details.style.cssText = 'display:none; padding:0 12px 12px; border-top:1px solid var(--border);';
+
+                        if (!hasPayments) {
+                            details.innerHTML = '<div style="padding:8px 0; color:var(--text-secondary);">Không có khoản nợ nào.</div>';
+                        } else {
+                            payments.forEach(pay => {
+                                // Tìm chi tiết cộng trừ từ pair
+                                const rawAtoB = pair[p + '|' + pay.receiver] || 0; // p nợ receiver (thô)
+                                const rawBtoA = pair[pay.receiver + '|' + p] || 0; // receiver nợ p (thô)
+                                const netAmount = pay.finalAmount !== undefined ? pay.finalAmount : pay.amount; // đã trừ
+
+                                let detailHTML = '';
+                                if (rawBtoA > 0 && rawAtoB > 0) {
+                                    // Bù trừ 2 chiều - Dạng hoá đơn mini
+                                    detailHTML = `
+                                    <div style="background: var(--bg-elevated); margin-top: 12px; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 0.9rem; border: 1px solid var(--border);">
+                                        <div style="margin-bottom: 8px; color: var(--text-secondary); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">Chi tiết bù trừ</div>
+                                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+                                            <span>${p} nợ ${pay.receiver}:</span>
+                                            <span style="color:var(--text-primary); font-weight:600;">${fmtMoney(Math.round(rawAtoB))}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                                            <span>${pay.receiver} nợ lại:</span>
+                                            <span style="color:var(--primary); font-weight:600;">- ${fmtMoney(Math.round(rawBtoA))}</span>
+                                        </div>
+                                        <div style="display:flex; justify-content:space-between; border-top: 1px dashed var(--border); padding-top: 8px; font-weight: 700;">
+                                            <span>Thực trả:</span>
+                                            <span style="color:var(--danger);">${fmtMoney(netAmount)}</span>
+                                        </div>
+                                    </div>`;
+                                } else {
+                                    // Giải thích ngắn gọn nếu nợ 1 chiều
+                                    detailHTML = `<div style="font-size:0.85rem; padding-top:6px; color:var(--text-secondary); margin-left: 28px;">↳ ${pay.receiver} đã trả tiền hộ trong các bill</div>`;
+                                }
+
+                                const row = document.createElement('div');
+                                row.style.cssText = 'padding:14px 0; border-bottom: 1px dashed var(--border);';
+
+                                // Giải thích trạng thái thanh toán (CHI TIẾT)
+                                let statusLabel = '';
+                                if (pay.offsetNotes && pay.offsetNotes.length > 0) {
+                                    let offsetLines = pay.offsetNotes.map(n => `<div style="display:flex;justify-content:space-between;gap:8px;"><span>• ${n.text}</span></div>`).join('');
+                                    if (!offsetLines) offsetLines = `<div>• ${pay.receiver} nợ ngược ${p} ở bill khác, đã cấn trừ ${fmtMoney(pay.amount - pay.finalAmount)}</div>`;
+                                    
+                                    if (pay.isPaid) {
+                                        statusLabel = `<div style="font-size:0.82rem; color:#8b5cf6; margin-top:6px; margin-left:28px; background:rgba(139,92,246,0.08); padding:10px 12px; border-radius:8px; border-left:3px solid #8b5cf6;">
+                                            <div style="font-weight:700; margin-bottom:4px;">🔄 Đã bù trừ tự động</div>
+                                            <div style="font-weight:600; margin-bottom:3px; font-size:0.78rem; text-transform:uppercase; color:var(--text-secondary);">Chi tiết cấn trừ:</div>
+                                            ${offsetLines}
+                                        </div>`;
+                                    } else {
+                                        statusLabel = `<div style="font-size:0.82rem;color:var(--text-secondary);margin-top:6px;margin-left:28px;background:rgba(139,92,246,0.06);padding:6px 10px;border-radius:6px;">
+                                            <div style="font-weight:600; color:#8b5cf6; margin-bottom:2px;">🔄 Bù trừ một phần:</div>
+                                            ${offsetLines}
+                                        </div>`;
+                                    }
+                                } else if (pay.isPaid === true) {
+                                    statusLabel = `<div style="font-size:0.82rem; color:var(--primary); font-weight:500; margin-top:6px; margin-left:28px; background:rgba(99,102,241,0.08); padding:8px 12px; border-radius:8px; border-left:3px solid var(--primary);">
+                                        ✅ Đã xác nhận thanh toán (chuyển khoản hoặc admin duyệt)
+                                    </div>`;
+                                }
+
+                                row.innerHTML = `
+                                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap: 10px;">
+                                    <div style="display:flex; align-items:center; gap: 10px;">
+                                        <span class="payment-status" style="display:flex; margin-top:2px;">${pay.isPaid ? '<i data-lucide="check-circle-2" style="width:18px;height:18px;color:var(--primary)"></i>' : '<i data-lucide="x-circle" style="width:18px;height:18px;color:var(--danger)"></i>'}</span>
+                                        <span style="font-weight:600; font-size: 1.05rem;">Trả cho <strong>${pay.receiver}</strong></span>
+                                    </div>
+                                    <div style="font-weight:800; font-size: 1.15rem; color: ${pay.isPaid ? 'var(--primary)' : 'var(--danger)'}; text-align: right;">
+                                        ${(!pay.isPaid && pay.finalAmount !== pay.amount) ? `<span style="text-decoration:line-through;color:var(--text-secondary);font-weight:500;font-size:0.9rem;margin-right:5px;">${fmtMoney(pay.amount)}</span>` : ''}
+                                        ${fmtMoney(netAmount)}
+                                    </div>
+                                </div>
+                                ${statusLabel}
+                                ${detailHTML}`;
+                                details.appendChild(row);
+                            });
+                        }
+                        col.appendChild(details);
+
+                        // Toggle click
+                        header.addEventListener('click', () => {
+                            const isOpen = details.style.display !== 'none';
+                            details.style.display = isOpen ? 'none' : 'block';
+                            col.querySelector('.debt-toggle-icon').style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                            col.style.boxShadow = isOpen ? 'none' : 'var(--shadow-md)';
+                        });
+
+                        table.appendChild(col);
+                    });
+                    resultEl.appendChild(table); animateCounter(totalEl, total);
+                }
+                resultEl.style.display = 'block'; totalEl.style.display = 'flex'; setTimeout(() => { resultEl.classList.add('is-revealed'); totalEl.classList.add('is-revealed'); }, 10); lucide.createIcons();
+
+                if (doSave && currentHistoryId && !isViewMode) {
+                    const dbSnap = await get(child(dbRef, `history/${currentHistoryId}`));
+                    const billTitle = dbSnap.exists() ? (dbSnap.val().title || 'Không tên') : 'Không tên';
+                    const oldData = dbSnap.exists() ? (dbSnap.val().data || []) : [];
+
+                    const oldUserData = oldData.filter(item => item.payer === editUser);
+                    const newDataFromOtherUsers = oldData.filter(item => item.payer !== editUser);
+                    const currentUserData = getCurrentData().filter(item => item.payer === editUser);
+                    const finalData = newDataFromOtherUsers.concat(currentUserData);
+
+                    await set(ref(db, `history/${currentHistoryId}/data`), finalData);
+                    const finalTotal = finalData.reduce((sum, item) => sum + parseInputToNumber(item.amount), 0);
+                    await set(ref(db, `history/${currentHistoryId}/totalExpense`), finalTotal);
+                    // [TICKER] Cập nhật lastModified để các user khác biết có thay đổi mới
+                    await set(ref(db, `history/${currentHistoryId}/lastModified`), Date.now());
+
+                    // --- TRACE LOGGING CHI TIẾT (ĐÃ SỬA) ---
+                    const oldMap = {}; oldUserData.forEach(item => { if (item.id) oldMap[item.id] = item; });
+                    const newMap = {}; currentUserData.forEach(item => { if (item.id) newMap[item.id] = item; });
+
+                    const logEntries = []; // Gom tất cả log entries trước
+                    
+                    // Kiểm tra dòng bị Xóa
+                    oldUserData.forEach(oldItem => {
+                        if (oldItem.id && !newMap[oldItem.id]) {
+                            logEntries.push({ action: 'Xóa khoản chi', msg: `Đã XÓA dòng ${fmtMoney(parseInputToNumber(oldItem.amount))} "${oldItem.note || ''}" khỏi bill "${billTitle}"` });
+                        }
+                    });
+                    
+                    // Kiểm tra dòng được Thêm hoặc Sửa
+                    currentUserData.forEach(newItem => {
+                        if (newItem.id && !oldMap[newItem.id]) {
+                            // Dòng MỚI hoàn toàn
+                            logEntries.push({ action: 'Thêm khoản chi', msg: `Đã THÊM dòng ${fmtMoney(parseInputToNumber(newItem.amount))} "${newItem.note || ''}" vào bill "${billTitle}"` });
+                        } else if (newItem.id && oldMap[newItem.id]) {
+                            const o = oldMap[newItem.id];
+                            // So sánh bằng giá trị số thực (FIX LỖI LOG THỪA: trước đây so sánh string gốc)
+                            const amountChanged = parseInputToNumber(o.amount) !== parseInputToNumber(newItem.amount);
+                            const noteChanged = (o.note || '') !== (newItem.note || '');
+                            // So sánh bens - chỉ so sánh checked và part (bỏ qua những thuộc tính ko liên quan)
+                            const oldBensStr = JSON.stringify((o.bens || []).map(b => ({ name: b.name, checked: b.checked, part: parseInputToNumber(b.part) })));
+                            const newBensStr = JSON.stringify((newItem.bens || []).map(b => ({ name: b.name, checked: b.checked, part: parseInputToNumber(b.part) })));
+                            const bensChanged = oldBensStr !== newBensStr;
+                            
+                            if (amountChanged || noteChanged || bensChanged) {
+                                logEntries.push({ action: 'Sửa khoản chi', msg: `Đã SỬA dòng từ ${fmtMoney(parseInputToNumber(o.amount))} "${o.note || ''}" ➔ ${fmtMoney(parseInputToNumber(newItem.amount))} "${newItem.note || ''}" tại bill "${billTitle}"` });
+                            }
+                        }
+                    });
+                    
+                    // Ghi log tuần tự (FIX LỖI LOG THIẾU: trước đây Promise.all bị lỗi silent)
+                    for (const entry of logEntries) {
+                        try { await window.logAction(entry.action, entry.msg); } catch(e) { console.warn('Log error:', e); }
+                    }
+
+                    const toast = document.createElement('div'); toast.className = 'toast-notification'; toast.innerHTML = '<i data-lucide="check"></i> Đã lưu thành công!'; document.body.appendChild(toast); lucide.createIcons(); setTimeout(() => toast.remove(), 3000);
+                }
+            }
+
+            function setupPageMode() { const pageTitleEl = container.querySelector('#pageTitle'); if (isViewMode) { pageTitleEl.textContent = "📊 Chi tiết Lịch sử (Chỉ xem)"; container.querySelectorAll('input, textarea, .add-line, .del-btn, #calcBtn').forEach(el => { el.setAttribute('disabled', 'true'); el.classList.add('readonly'); }); } else if (editUser) { pageTitleEl.textContent = `📝 Thêm chi tiêu cho ${editUser}`; container.querySelectorAll('.group').forEach(g => { if (g.dataset.name !== editUser) g.style.display = 'none'; }); } }
+            container.querySelector('#calcBtn').addEventListener('click', () => calculate(true));
+            onValue(ref(db, 'paidList'), (snapshot) => { paidStatus = snapshot.val() || {}; if (isViewMode) calculate(false); });
+            (async () => {
+                container.querySelectorAll('.group .rows').forEach(row => { row.innerHTML = `<div class="input-card skeleton"></div><div class="input-card skeleton"></div>`; });
+                const snap = await get(child(dbRef, `history/${currentHistoryId}`));
+                let dataToLoad = [];
+                if (snap.exists()) {
+                    const record = snap.val();
+
+                    if (record.title && container.querySelector('#pageTitle')) { if (!editUser) { container.querySelector('#pageTitle').textContent = `${record.title}`; } }
+                    if (record.data) {
+                        if (editUser && !isViewMode) dataToLoad = record.data.filter(item => item.payer === editUser);
+                        else dataToLoad = record.data;
+                    }
+                }
+                renderData(dataToLoad);
+                setupPageMode();
+
+                // [MỚI] Ẩn dòng chi tiêu không liên quan đến người dùng & cập nhật tóm tắt (View Mode)
+                if (isViewMode && viewerUser) {
+                    container.querySelectorAll('.group').forEach(g => {
+                        const rows = g.querySelector('.rows');
+                        const inputCards = rows.querySelectorAll('.input-card');
+                        const summary = g.querySelector('.group-summary');
+                        const groupName = g.dataset.name;
+
+                        let visibleCount = 0;
+                        let userTotal = 0;
+
+                        inputCards.forEach(card => {
+                            const amount = parseInputToNumber(card.querySelector('.amount').value);
+                            const checkedBens = Array.from(card.querySelectorAll('.benef')).filter(b => b.querySelector('.ben-cb').checked);
+                            const totalOwn = Array.from(card.querySelectorAll('.benef')).reduce((s, b) => s + parseInputToNumber(b.querySelector('.part').value), 0);
+                            const remain = Math.max(amount - totalOwn, 0);
+                            
+                            const totalGuests = Array.from(card.querySelectorAll('.ben-guest-count')).reduce((s, span) => s + (parseInt(span.textContent) || 0), 0);
+                            const totalParts = checkedBens.length + totalGuests;
+                            const share = totalParts > 0 ? remain / totalParts : 0;
+
+                            // Kiểm tra người dùng có liên quan không
+                            const isPayer = (groupName === viewerUser);
+                            const userBenRow = Array.from(card.querySelectorAll('.benef')).find(b => b.querySelector('.ben-cb').dataset.name === viewerUser);
+                            const isBeneficiary = userBenRow && userBenRow.querySelector('.ben-cb').checked;
+                            const userGuestCount = userBenRow ? (parseInt(userBenRow.querySelector('.ben-guest-count')?.textContent) || 0) : 0;
+
+                            if (isPayer || isBeneficiary || userGuestCount > 0) {
+                                visibleCount++;
+                                // Tính phần chi tiêu của người dùng
+                                let costForThisUser = 0;
+                                if (isBeneficiary) {
+                                    costForThisUser += parseInputToNumber(userBenRow.querySelector('.part').value) + share;
+                                }
+                                if (userGuestCount > 0) {
+                                    costForThisUser += share * userGuestCount;
+                                }
+                                userTotal += costForThisUser;
+                            } else {
+                                card.style.display = 'none'; // Ẩn dòng không liên quan
+                            }
+                        });
+
+                        if (visibleCount === 0) {
+                            g.style.display = 'none'; // Ẩn nhóm không có dòng nào liên quan
+                        } else if (summary) {
+                            summary.textContent = `${visibleCount} khoản chi • ${fmtMoney(Math.round(userTotal))}`;
+                        }
+                    });
+                }
+                if (editUser && !isViewMode) {
+                    addLineToGroup(editUser);
+                    lucide.createIcons();
+                    // Hiển bảng nhận tiền ngay từ đầu (Tính năng 1)
+                    await calculate(false);
+                    // Cập nhật khi rời ô nhập (blur)
+                    container.addEventListener('blur', (e) => {
+                        if (e.target.matches('.amount, .part, .ben-cb')) {
+                            calculate(false);
+                        }
+                    }, true);
+                    container.addEventListener('change', (e) => {
+                        if (e.target.matches('.ben-cb')) {
+                            calculate(false);
+                        }
+                    }, true);
+                }
+                if (isViewMode) await calculate(false);
+            })();
+        }
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/service-worker.js').then(reg => console.log('SW registered.'), err => console.log('SW registration failed:', err)); }); }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Lịch sử chia tiền</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <link rel="stylesheet" href="history-style.css?v=100">
+    <link rel="stylesheet" href="style.css?v=100"> 
+</head>
+<body class="dark-mode">
+
+<h1 class="main-title">Quản lý Lịch sử chi tiêu</h1>
+
+<div class="controls">
+    <input type="text" id="newHistoryTitle" placeholder="Tên lịch sử mới (ví dụ: Chuyến đi Vũng Tàu)">
+    <button id="addHistoryBtn" class="btn btn-primary">
+        <i data-lucide="plus"></i> Tạo mới
+    </button>
+</div>
+
+<div id="historyList">Đang tải...</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, set, remove, onValue, update } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+    const firebaseConfig = { apiKey: "AIzaSyD1b0VVYy297LzrfPd4S2faljsgmNfvzEk", authDomain: "hung-355812.firebaseapp.com", databaseURL: "https://hung-355812-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "hung-355812", storageBucket: "hung-355812.appspot.com", messagingSenderId: "788577107540", appId: "1:788577107540:web:ca5b149d5e5a45bba937c1", measurementId: "G-JPNZC88YFG" };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const historyRef = ref(db, 'history');
+    const historyListEl = document.getElementById('historyList');
+    const addHistoryBtn = document.getElementById('addHistoryBtn');
+    const newHistoryTitleInput = document.getElementById('newHistoryTitle');
+    
+    lucide.createIcons();
+    
+    function fmtMoney(num) { return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + 'đ'; }
+
+    async function logAction(actionType, message) {
+        try {
+            const currentUser = localStorage.getItem('currentUser') || 'Admin';
+            const timestamp = Date.now();
+            await set(ref(db, `logs/${timestamp}`), {
+                user: currentUser,
+                type: actionType,
+                message: message,
+                time: timestamp
+            });
+        } catch(e) { console.error("Lỗi ghi log:", e); }
+    }
+    addHistoryBtn.addEventListener('click', async () => {
+        const title = newHistoryTitleInput.value.trim();
+        if (!title) {
+            alert('Vui lòng nhập tên cho lịch sử mới!');
+            return;
+        }
+        const newKey = Date.now().toString();
+        const newHistoryRecord = {
+            title: title,
+            createdAt: newKey,
+            totalExpense: 0,
+            data: []
+        };
+        await set(ref(db, `history/${newKey}`), newHistoryRecord);
+        await logAction('Khởi tạo Bill', `Đã tạo bill mới: "${title}"`);
+        newHistoryTitleInput.value = '';
+        alert(`Đã tạo lịch sử "${title}" thành công!`);
+    });
+
+    onValue(historyRef, (snapshot) => {
+        historyListEl.innerHTML = '';
+        if (!snapshot.exists()) {
+            historyListEl.textContent = 'Chưa có lịch sử nào. Hãy tạo một lịch sử mới ở trên.';
+            return;
+        }
+        
+        const records = Object.entries(snapshot.val()).sort((a, b) => b[0].localeCompare(a[0]));
+        
+        records.forEach(([key, r]) => {
+            const div = document.createElement('div');
+            div.className = 'record';
+
+            const date = new Date(parseInt(key)).toLocaleString('vi-VN');
+            const total = r.totalExpense || 0;
+            const escapedTitle = (r.title || 'Bản ghi không có tiêu đề').replace(/"/g, '&quot;');
+
+            // Đã xóa nút "Mở xem" (open-btn) khỏi HTML
+            div.innerHTML = `
+                <div class="record-info">
+                    <span class="record-title">${escapedTitle}</span>
+                    <span class="record-details">Ngày tạo: ${date} - Tổng chi: ${fmtMoney(total)}</span>
+                </div>
+                <div class="record-buttons">
+                    <button class="btn btn-secondary btn-icon edit-btn" data-key="${key}" data-title="${escapedTitle}" title="Sửa tên"><i data-lucide="pencil"></i></button>
+                </div>
+            `;
+            
+            historyListEl.appendChild(div);
+        });
+        
+        // Đã xóa sự kiện click cho nút "Mở xem" (open-btn)
+        
+        historyListEl.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const key = e.currentTarget.dataset.key;
+                const oldTitle = e.currentTarget.dataset.title;
+                const newTitle = prompt('Nhập tên mới cho lịch sử:', oldTitle);
+                if (newTitle === null || newTitle.trim() === '') {
+                    return;
+                }
+                try {
+                    await update(ref(db, `history/${key}`), {
+                        title: newTitle.trim()
+                    });
+                    await logAction('Đổi tên Bill', `Đã đổi tên bill từ "${oldTitle}" thành "${newTitle.trim()}"`);
+                } catch (error) {
+                    console.error("Lỗi khi cập nhật tên:", error);
+                    alert("Đã có lỗi xảy ra, không thể cập nhật tên.");
+                }
+            });
+        });
+
+        // Đã chuyển nút Xóa vào Admin Dashboard - chỉ Admin mới được xóa
+        
+        lucide.createIcons();
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+/* ============================================== */
+/* --- HISTORY PAGE — PREMIUM REDESIGN        --- */
+/* ============================================== */
+
+/* Base overrides for iframe context */
+body {
+    font-family: var(--font-sans);
+    background-color: var(--bg);
+    color: var(--text-primary);
+    padding: 1.5rem;
+    padding-top: 0.5rem;
+    transition: background-color 0.3s, color 0.3s;
+    line-height: 1.6;
+}
+
+.main-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+    letter-spacing: -0.02em;
+}
+
+/* --- Controls Section --- */
+.controls {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.controls input {
+    flex-grow: 1;
+    padding: 0.85rem 1rem;
+    background-color: var(--input-bg);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm, 10px);
+    font-size: 1rem;
+    color: var(--text-primary);
+    transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.controls input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.controls .btn {
+    flex-shrink: 0;
+    padding: 0.85rem 1.25rem;
+    border-radius: var(--radius-sm, 10px);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* --- History List --- */
+#historyList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-bottom: 100px;
+}
+
+/* --- Record Card --- */
+.record {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 16px);
+    padding: 1.2rem 1.4rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.record::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent), var(--primary));
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+
+.record:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    border-color: var(--accent);
+}
+
+.record:hover::before {
+    opacity: 1;
+}
+
+.record:active {
+    transform: scale(0.99);
+}
+
+.record-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+    flex: 1;
+}
+
+.record-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.record-details {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.record-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-left: 0.75rem;
+}
+
+.btn-icon {
+    padding: 0.6rem;
+    line-height: 0;
+    border-radius: var(--radius-sm, 10px);
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+.btn-icon.btn-danger:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* --- Dark mode adjustments --- */
+body.dark-mode .record {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+body.dark-mode .record:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}

@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lịch Trình Du Lịch</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'], },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .timeline-line { position: absolute; left: 1.25rem; top: 2rem; bottom: 0; width: 2px; background-color: #e2e8f0; }
+        .dark .timeline-line { background-color: #334155; }
+        body { transition: background-color 0.3s, color 0.3s; }
+        
+        /* Modal Styles */
+        .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+        .modal-sheet { transition: transform 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 antialiased selection:bg-brand-500 selection:text-white pb-32">
+
+    <!-- Theme Toggle -->
+    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2">
+        <button id="themeToggle" class="p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg text-amber-500 dark:text-amber-300 border border-gray-200 dark:border-gray-700 hover:scale-105 transition">
+            <i class="fas fa-moon dark:hidden"></i>
+            <i class="fas fa-sun hidden dark:block"></i>
+        </button>
+    </div>
+
+    <!-- Dashboard UI -->
+    <div id="app-dashboard" class="max-w-md mx-auto min-h-screen p-4 pt-16">
+        <h1 class="text-3xl font-black mb-6 dark:text-white flex items-center gap-2"><i class="fas fa-globe-asia text-brand-500"></i> Các chuyến đi</h1>
+        <div id="dashboard-trips" class="grid gap-4 mb-8">
+            <!-- List of trips will be rendered here -->
+        </div>
+        <button onclick="openModal('modal-new-trip')" class="w-full bg-brand-600 text-white font-bold p-4 rounded-2xl shadow-lg hover:bg-brand-700 transition flex justify-center items-center gap-2">
+            <i class="fas fa-plus"></i> Tạo chuyến đi mới
+        </button>
+    </div>
+
+    <!-- Trip Detail UI -->
+    <div id="app-trip-detail" class="hidden relative">
+        <div class="fixed top-4 left-4 z-50">
+            <button onclick="closeTrip()" class="p-3 bg-white dark:bg-gray-800 rounded-full shadow-lg text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:scale-105 transition flex items-center justify-center w-11 h-11">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+        </div>
+
+    <!-- Floating Admin Menu (CRUD UI) -->
+    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-white dark:bg-gray-800 p-2 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 flex gap-2">
+        <button onclick="openModal('modal-info')" class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition" title="Sửa thông tin chung"><i class="fas fa-edit"></i></button>
+        <button onclick="openModal('modal-day')" class="w-12 h-12 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition" title="Thêm Ngày mới"><i class="fas fa-calendar-plus"></i></button>
+        <button onclick="openLibrary()" class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full hover:bg-amber-200 transition shadow-sm" title="Sổ tay địa điểm"><i class="fas fa-book"></i></button>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="max-w-md mx-auto bg-white dark:bg-gray-800 min-h-screen shadow-2xl overflow-hidden relative">
+        
+        <!-- HEADER -->
+        <header class="bg-brand-600 dark:bg-brand-900 text-white p-6 rounded-b-[2.5rem] shadow-lg relative overflow-hidden">
+            <div class="absolute inset-0 opacity-20 bg-cover bg-center" style="background-color: #0c4a6e;"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-brand-600/80 to-transparent dark:from-brand-900/80"></div>
+            
+            <div class="relative z-10">
+                <div class="flex justify-between items-start mb-2">
+                    <h1 id="render-trip-name" class="text-3xl font-extrabold tracking-tight"></h1>
+                    <span class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold"><span id="render-member-count"></span></span>
+                </div>
+                <p class="text-brand-100 flex items-center gap-2 font-medium">
+                    <i class="far fa-calendar-alt"></i> <span id="render-trip-dates"></span>
+                </p>
+                
+                <div class="mt-6 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                    <p class="text-xs text-center mb-2 font-medium uppercase tracking-wider text-brand-100">Đếm ngược khởi hành</p>
+                    <div class="flex justify-around text-center">
+                        <div class="flex flex-col"><span class="text-3xl font-black tabular-nums" id="cd-days">00</span><span class="text-[10px] uppercase font-semibold">Ngày</span></div>
+                        <div class="text-2xl font-black opacity-50 mt-1">:</div>
+                        <div class="flex flex-col"><span class="text-3xl font-black tabular-nums" id="cd-hours">00</span><span class="text-[10px] uppercase font-semibold">Giờ</span></div>
+                        <div class="text-2xl font-black opacity-50 mt-1">:</div>
+                        <div class="flex flex-col"><span class="text-3xl font-black tabular-nums" id="cd-mins">00</span><span class="text-[10px] uppercase font-semibold">Phút</span></div>
+                        <div class="text-2xl font-black opacity-50 mt-1">:</div>
+                        <div class="flex flex-col"><span class="text-3xl font-black tabular-nums" id="cd-secs">00</span><span class="text-[10px] uppercase font-semibold">Giây</span></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-5 space-y-8 -mt-2">
+            
+            <!-- WEATHER SECTION -->
+            <div id="weather-container"></div>
+
+            <!-- TIMELINE -->
+            <section>
+                <div class="flex items-center gap-2 mb-4">
+                    <h2 class="text-2xl font-black text-gray-800 dark:text-white">Lịch trình</h2>
+                    <div class="h-1 flex-1 bg-gradient-to-r from-brand-500 to-transparent rounded-full opacity-30"></div>
+                </div>
+                
+                <div id="timeline-tabs" class="flex gap-3 mb-8 overflow-x-auto pb-2 no-scrollbar snap-x"></div>
+                <div id="timeline-contents"></div>
+            </section>
+
+            <!-- EXPENSES -->
+            <section class="mt-10">
+                <div class="bg-gray-900 text-white rounded-3xl p-1 shadow-xl relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-brand-500 via-purple-500 to-rose-500 opacity-50"></div>
+                    
+                    <div class="relative bg-gray-900 rounded-[1.4rem] p-6 m-[2px]">
+                        <h2 class="text-xl font-black mb-5 flex items-center gap-3">
+                            <span class="bg-white/10 p-2 rounded-xl"><i class="fas fa-wallet text-amber-400 text-xl"></i></span> 
+                            Dự toán chi phí / Người
+                        </h2>
+                        
+                        <div id="expense-list" class="space-y-4 mb-6"></div>
+                        
+                        <div class="bg-gradient-to-r from-brand-600 to-indigo-600 rounded-2xl p-5 flex justify-between items-center shadow-inner">
+                            <span class="font-black uppercase tracking-wider text-sm opacity-90">Tổng chi phí<br>dự kiến</span>
+                            <span id="render-expense-total" class="font-black text-3xl text-white drop-shadow-md"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODALS (CHỨC NĂNG THÊM TRỰC TIẾP) -->
+
+    <!-- Modal Cập nhật Thông tin -->
+    <div id="modal-info" class="fixed inset-0 z-[100] hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-info')"></div>
+        <div class="modal-sheet absolute bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 translate-y-full bg-white dark:bg-gray-800 rounded-t-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar border-t border-gray-200 dark:border-gray-700">
+            <h3 class="font-bold text-xl mb-4 border-b dark:border-gray-700 pb-2">Thông tin chung</h3>
+            <div class="flex gap-2">
+                <div class="w-2/3">
+                    <label class="block mb-2 text-sm font-bold">Tên chuyến đi</label>
+                    <input type="text" id="inp-trip-name" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div class="w-1/3">
+                    <label class="block mb-2 text-sm font-bold">Số người</label>
+                    <input type="number" id="inp-member-count" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="1">
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <div class="w-1/2">
+                    <label class="block mb-2 text-sm font-bold">Ngày đi</label>
+                    <input type="date" id="inp-start-date" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div class="w-1/2">
+                    <label class="block mb-2 text-sm font-bold">Ngày về</label>
+                    <input type="date" id="inp-end-date" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+            </div>
+            <label class="block mb-2 text-sm font-bold">Điểm đến</label>
+            <input type="text" id="inp-dest" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <label class="block mb-2 text-sm font-bold">Ngày giờ khởi hành (Đếm ngược)</label>
+            <input type="datetime-local" id="inp-countdown" lang="en-GB" class="w-full p-3 rounded-xl border mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm">
+            <button onclick="saveInfo()" class="w-full bg-blue-600 text-white font-bold p-3 rounded-xl shadow-lg">Lưu thông tin</button>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Ngày -->
+    <div id="modal-day" class="fixed inset-0 z-[100] hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-day')"></div>
+        <div class="modal-sheet absolute bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 translate-y-full bg-white dark:bg-gray-800 rounded-t-3xl p-6 shadow-2xl border-t border-gray-200 dark:border-gray-700">
+            <h3 class="font-bold text-xl mb-4 border-b dark:border-gray-700 pb-2">Thêm Ngày Mới</h3>
+            <label class="block mb-2 text-sm font-bold">Tên Ngày (VD: Ngày 2)</label>
+            <input type="text" id="inp-day-label" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            <label class="block mb-2 text-sm font-bold">Ngày tháng</label>
+            <input type="date" id="inp-day-date" class="w-full p-3 rounded-xl border mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <button onclick="addDay()" class="w-full bg-green-600 text-white font-bold p-3 rounded-xl shadow-lg">Tạo ngày mới</button>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Hoạt động -->
+    <div id="modal-event" class="fixed inset-0 z-[100] hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-event')"></div>
+        <div class="modal-sheet absolute bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 translate-y-full bg-white dark:bg-gray-800 rounded-t-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar border-t border-gray-200 dark:border-gray-700">
+            <h3 class="font-bold text-xl mb-4 border-b dark:border-gray-700 pb-2">Thêm Lịch Trình</h3>
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-sm font-bold">Tên hoạt động</label>
+                <button type="button" onclick="openLibrary('event')" class="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold hover:bg-amber-200"><i class="fas fa-book"></i> Chọn từ Sổ tay</button>
+            </div>
+            <input type="text" id="inp-ev-title" placeholder="VD: Ăn sáng" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <div class="flex gap-2">
+                <div class="w-1/2">
+                    <label class="block mb-2 text-sm font-bold">Giờ bắt đầu</label>
+                    <input type="time" id="inp-ev-start" lang="en-GB" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+                <div class="w-1/2">
+                    <label class="block mb-2 text-sm font-bold">Giờ kết thúc</label>
+                    <input type="time" id="inp-ev-end" lang="en-GB" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                </div>
+            </div>
+
+            <label class="block mb-2 text-sm font-bold">Địa chỉ / Vị trí</label>
+            <input type="text" id="inp-ev-addr" placeholder="Tên địa điểm (VD: Chợ Đà Lạt)" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+
+            <label class="block mb-2 text-sm font-bold">Khu vực (Tùy chọn)</label>
+            <div class="flex gap-2 mb-3">
+                <select id="inp-ev-area" class="flex-1 p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white area-selector"></select>
+                <button type="button" onclick="addNewArea()" class="bg-indigo-100 text-indigo-700 font-bold px-3 rounded-xl hover:bg-indigo-200 transition whitespace-nowrap" title="Thêm khu vực"><i class="fas fa-plus"></i></button>
+                <button type="button" onclick="deleteArea('inp-ev-area')" class="bg-red-100 text-red-600 font-bold px-3 rounded-xl hover:bg-red-200 transition whitespace-nowrap" title="Xóa khu vực đang chọn"><i class="fas fa-trash"></i></button>
+            </div>
+
+            <label class="block mb-2 text-sm font-bold">Link Google Maps (Không bắt buộc)</label>
+            <input type="url" id="inp-ev-maplink" placeholder="Dán link chia sẻ từ Google Maps" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <label class="block mb-2 text-sm font-bold">Chi tiết hoạt động (Ghi chú chính)</label>
+            <input type="text" id="inp-ev-info" placeholder="VD: Tự do khám phá" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+
+            <label class="block mb-2 text-sm font-bold">Tổng chi phí nhóm (VNĐ) - Tự chia đều</label>
+            <input type="number" id="inp-ev-cost" placeholder="100000" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <label class="block mb-2 text-sm font-bold">Lưu ý thêm (Cảnh báo)</label>
+            <input type="text" id="inp-ev-note" placeholder="Tùy chọn" class="w-full p-3 rounded-xl border mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+
+            <!-- Sub items container -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-sm font-bold">Các mục phụ / Lựa chọn khác</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="openLibrary('subitem')" class="text-xs bg-amber-100 text-amber-700 px-2 py-1.5 rounded-lg font-bold hover:bg-amber-200 transition"><i class="fas fa-book"></i> Thư viện</button>
+                        <button type="button" onclick="addSubItemField()" class="text-xs bg-blue-100 text-blue-600 px-2 py-1.5 rounded-lg font-bold hover:bg-blue-200 transition">+ Thêm tay</button>
+                    </div>
+                </div>
+                <div id="sub-items-container" class="space-y-3">
+                    <!-- Dynamic fields will be inserted here -->
+                </div>
+            </div>
+
+            <button id="btn-save-event" onclick="addEvent()" class="w-full bg-indigo-600 text-white font-bold p-3 rounded-xl shadow-lg">Thêm vào lịch trình</button>
+        </div>
+    </div>
+
+    <!-- Modal Thêm Chi Phí đã bị xóa để gom chung với Lịch Trình -->
+
+    <!-- Modal Library -->
+    <div id="modal-library" class="fixed inset-0 z-[110] hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-library')"></div>
+        <div class="modal-sheet absolute bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 translate-y-full bg-white dark:bg-gray-800 rounded-t-3xl p-6 shadow-2xl h-[80vh] flex flex-col border-t border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2">
+                <h3 class="font-bold text-xl"><i class="fas fa-book text-amber-500"></i> Sổ Tay Địa Điểm</h3>
+                <button id="btn-add-place" onclick="openPlaceForm()" class="text-sm bg-green-100 text-green-600 px-3 py-1.5 rounded-lg font-bold hover:bg-green-200 transition"><i class="fas fa-plus"></i> Thêm mới</button>
+            </div>
+            
+            <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1" id="library-tabs">
+                <!-- Tabs rendered here -->
+            </div>
+            
+            <div id="library-list" class="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                <!-- Places rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Place Form -->
+    <div id="modal-place-form" class="fixed inset-0 z-[120] hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-place-form')"></div>
+        <div class="modal-sheet absolute bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 translate-y-full bg-white dark:bg-gray-800 rounded-t-3xl p-6 shadow-2xl border-t border-gray-200 dark:border-gray-700">
+            <h3 class="font-bold text-xl mb-4 border-b dark:border-gray-700 pb-2" id="place-form-title">Thêm Địa Điểm</h3>
+            
+            <label class="block mb-2 text-sm font-bold">Phân loại</label>
+            <select id="inp-pl-cat" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <option value="Quán ăn">Quán ăn</option>
+                <option value="Cafe">Cafe / Tráng miệng</option>
+                <option value="Tham quan">Tham quan / Vui chơi</option>
+                <option value="Khác">Khác</option>
+            </select>
+            
+            <label class="block mb-2 text-sm font-bold">Tên địa điểm</label>
+            <input type="text" id="inp-pl-name" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <label class="block mb-2 text-sm font-bold">Địa chỉ</label>
+            <input type="text" id="inp-pl-addr" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+
+            <label class="block mb-2 text-sm font-bold">Khu vực (Tùy chọn)</label>
+            <div class="flex gap-2 mb-3">
+                <select id="inp-pl-area" class="flex-1 p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 dark:text-white area-selector"></select>
+                <button type="button" onclick="addNewArea()" class="bg-indigo-100 text-indigo-700 font-bold px-3 rounded-xl hover:bg-indigo-200 transition whitespace-nowrap" title="Thêm khu vực"><i class="fas fa-plus"></i></button>
+                <button type="button" onclick="deleteArea('inp-pl-area')" class="bg-red-100 text-red-600 font-bold px-3 rounded-xl hover:bg-red-200 transition whitespace-nowrap" title="Xóa khu vực đang chọn"><i class="fas fa-trash"></i></button>
+            </div>
+            
+            <label class="block mb-2 text-sm font-bold">Link Google Maps</label>
+            <input type="url" id="inp-pl-map" class="w-full p-3 rounded-xl border mb-3 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <label class="block mb-2 text-sm font-bold">Mức giá tham khảo (VNĐ)</label>
+            <input type="number" id="inp-pl-cost" class="w-full p-3 rounded-xl border mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <div class="flex gap-2">
+                <button onclick="savePlace()" class="flex-1 bg-green-600 text-white font-bold p-3 rounded-xl shadow-lg">Lưu lại</button>
+                <button id="btn-del-place" onclick="deletePlace()" class="w-14 bg-red-100 text-red-600 font-bold p-3 rounded-xl hidden"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load data file -->
+    <script>
+const tripData = {
+    tripName: "Chuyến Đi Mẫu",
+    areas: ["Khu Trung Tâm", "Khu Ba Toa", "Khu Hồ Tuyền Lâm", "Chưa phân khu"],
+    places: [
+        {
+            id: "pl_1",
+            name: "Lẩu Bò Ba Toa (Quán Gỗ)",
+            address: "1/29 Hoàng Diệu, Phường 5",
+            area: "Khu Ba Toa",
+            mapLink: "https://maps.app.goo.gl/xxx",
+            cost: 150000,
+            category: "Quán ăn"
+        }
+    ],
+    memberCount: 6,
+    startDate: "01/01/2027",
+    endDate: "03/01/2027",
+    countdownTarget: "2026-12-31T23:59:59",
+    destination: "Đà Nẵng",
+    days: [
+        {
+            id: "day_1",
+            label: "Ngày 1",
+            date: "01/01",
+            events: [
+                {
+                    id: "ev_1",
+                    startTime: "08:00",
+                    endTime: "10:00",
+                    title: "Hoạt động mẫu 1",
+                    address: "Địa chỉ mẫu",
+                    mapLink: "https://maps.google.com",
+                    infoType: "Ghi chú",
+                    infoContent: "Vui vẻ",
+                    cost: 100000,
+                    note: "Ghi chú bổ sung mẫu"
+                }
+            ]
+        }
+    ],
+    expenses: [
+        {
+            id: "ex_1",
+            name: "Chi phí mẫu",
+            detail: "Chi tiết",
+            amount: 500000
+        }
+    ]
+};
+
+// Expose dữ liệu mặc định ra global để index.html có thể đọc
+window.DEFAULT_DATA = tripData;
+
+</script>
+
+    </div> <!-- End app-trip-detail -->
+
+    <!-- Modal New Trip -->
+    <div id="modal-new-trip" class="fixed inset-0 z-[100] hidden">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('modal-new-trip')"></div>
+        <div class="modal-sheet absolute bottom-0 w-full max-w-md left-1/2 transform -translate-x-1/2 translate-y-full bg-white dark:bg-gray-800 rounded-t-3xl p-6 shadow-2xl border-t border-gray-200 dark:border-gray-700">
+            <h3 class="font-bold text-xl mb-4 border-b dark:border-gray-700 pb-2">Tạo Chuyến Đi Mới</h3>
+            
+            <label class="block mb-2 text-sm font-bold">Tên chuyến đi</label>
+            <input type="text" id="new-trip-name" placeholder="VD: Đà Lạt mộng mơ..." class="w-full p-3 rounded-xl border mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <label class="block mb-2 text-sm font-bold">Ngày đi (Dự kiến)</label>
+            <input type="date" id="new-trip-date" class="w-full p-3 rounded-xl border mb-4 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+            
+            <div class="mb-5 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                <label class="flex items-center gap-2 cursor-pointer font-bold text-sm text-gray-800 dark:text-gray-200 select-none">
+                    <input type="checkbox" id="new-trip-private" class="w-4 h-4 text-brand-600 rounded border-gray-300" onchange="document.getElementById('div-trip-pass').classList.toggle('hidden', !this.checked)">
+                    <i class="fas fa-lock text-brand-500"></i> Khóa chuyến đi (Cần mật khẩu)
+                </label>
+                <div id="div-trip-pass" class="hidden mt-3">
+                    <label class="block mb-2 text-xs font-bold text-gray-600 dark:text-gray-400">Nhập mật khẩu khóa</label>
+                    <input type="password" id="new-trip-password" placeholder="Mật khẩu của bạn..." class="w-full p-2.5 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm font-bold tracking-widest">
+                </div>
+            </div>
+
+            <button onclick="createNewTrip()" class="w-full bg-brand-600 text-white font-bold p-3 rounded-xl shadow-lg">Bắt đầu chuyến đi</button>
+        </div>
+    </div>
+
+    <!-- Logic Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+        const firebaseConfig = { 
+            apiKey: "AIzaSyD1b0VVYy297LzrfPd4S2faljsgmNfvzEk", 
+            authDomain: "hung-355812.firebaseapp.com", 
+            databaseURL: "https://hung-355812-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "hung-355812", 
+            storageBucket: "hung-355812.appspot.com", 
+            messagingSenderId: "788577107540", 
+            appId: "1:788577107540:web:ca5b149d5e5a45bba937c1", 
+            measurementId: "G-JPNZC88YFG" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef = ref(db, 'trips_v3'); 
+
+        // ---------------------------------
+        // STATE MANAGEMENT
+        // ---------------------------------
+        let appData = {};
+        let currentTripId = null;
+        let data = { days: [], places: [], areas: [] };
+        let isFirstLoad = true;
+
+        function initData() {
+            onValue(dbRef, (snapshot) => {
+                const val = snapshot.val();
+                
+                if (val) {
+                    appData = val;
+                    if (currentTripId && appData[currentTripId]) {
+                        data = appData[currentTripId];
+                        renderAll();
+                    } else {
+                        currentTripId = null;
+                        renderDashboard();
+                    }
+                } else {
+                    appData = {};
+                    if (!localStorage.getItem('migrated_v2_to_v3')) {
+                        const oldDbRef = ref(db, 'trip_data_v2');
+                        get(oldDbRef).then((oldSnap) => {
+                            const oldVal = oldSnap.val();
+                            if (oldVal) {
+                                const tripId = 'trip_migrated_old';
+                                oldVal.id = tripId;
+                                oldVal.tripName = oldVal.tripName || 'Chuyến đi cũ (Đà Lạt)';
+                                oldVal.isPrivate = false;
+                                
+                                appData[tripId] = oldVal;
+                                set(dbRef, appData);
+                                localStorage.setItem('migrated_v2_to_v3', 'true');
+                            } else {
+                                localStorage.setItem('migrated_v2_to_v3', 'true');
+                                renderDashboard();
+                            }
+                        }).catch(() => renderDashboard());
+                    } else {
+                        renderDashboard();
+                    }
+                }
+            });
+        }
+
+        function saveData() {
+            if(!currentTripId) return;
+            appData[currentTripId] = data;
+            set(dbRef, appData).catch(err => alert("Lỗi lưu lên Đám mây: " + err.message));
+        }
+
+        // ---------------------------------
+        // RENDERING
+        // ---------------------------------
+        let targetDate = 0;
+        
+        function formatDateForDisplay(d) {
+            if(!d) return '?';
+            if(d.includes('/')) return d;
+            const p = d.split('-');
+            if(p.length === 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            return d;
+        }
+
+        function formatDayDateForDisplay(d) {
+            if(!d) return '?';
+            if(d.includes('/')) return d;
+            const p = d.split('-');
+            if(p.length === 3) return `${p[2]}/${p[1]}`;
+            return d;
+        }
+
+        function renderHeader() {
+            document.getElementById('render-trip-name').innerText = data.tripName || 'Chưa có tên';
+            document.getElementById('render-member-count').innerText = (data.memberCount || 0) + ' người';
+            document.getElementById('render-trip-dates').innerText = `${formatDateForDisplay(data.startDate)} - ${formatDateForDisplay(data.endDate)}`;
+            targetDate = new Date(data.countdownTarget || 0).getTime();
+            
+            // Pre-fill info modal
+            document.getElementById('inp-trip-name').value = data.tripName || '';
+            document.getElementById('inp-member-count').value = data.memberCount || 6;
+            document.getElementById('inp-start-date').value = (data.startDate && data.startDate.includes('-')) ? data.startDate : '';
+            document.getElementById('inp-end-date').value = (data.endDate && data.endDate.includes('-')) ? data.endDate : '';
+            document.getElementById('inp-dest').value = data.destination || '';
+            document.getElementById('inp-countdown').value = data.countdownTarget ? data.countdownTarget.substring(0, 16) : '';
+        }
+
+        const weatherCodes = {
+            0: { text: "Trời quang", icon: "fa-sun" },
+            1: { text: "Ít mây", icon: "fa-cloud-sun" },
+            2: { text: "Nhiều mây", icon: "fa-cloud" },
+            3: { text: "Âm u", icon: "fa-cloud" },
+            45: { text: "Sương mù", icon: "fa-smog" },
+            48: { text: "Sương mù", icon: "fa-smog" },
+            51: { text: "Mưa nhẹ", icon: "fa-cloud-rain" },
+            53: { text: "Mưa phùn", icon: "fa-cloud-rain" },
+            55: { text: "Mưa dày", icon: "fa-cloud-rain" },
+            61: { text: "Mưa nhỏ", icon: "fa-cloud-rain" },
+            63: { text: "Mưa vừa", icon: "fa-cloud-showers-heavy" },
+            65: { text: "Mưa to", icon: "fa-cloud-showers-heavy" },
+            71: { text: "Tuyết", icon: "fa-snowflake" },
+            80: { text: "Mưa rào nhẹ", icon: "fa-cloud-showers-heavy" },
+            81: { text: "Mưa rào", icon: "fa-cloud-showers-heavy" },
+            82: { text: "Mưa rào to", icon: "fa-cloud-showers-heavy" },
+            95: { text: "Giông bão", icon: "fa-bolt" },
+            96: { text: "Giông bão", icon: "fa-bolt" },
+            99: { text: "Giông bão lớn", icon: "fa-bolt" }
+        };
+
+        async function fetchWeather(destination) {
+            try {
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(destination)}&count=1&language=vi&format=json`);
+                const geoData = await geoRes.json();
+                if(!geoData.results || geoData.results.length === 0) return null;
+                const { latitude, longitude, name } = geoData.results[0];
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FBangkok`);
+                const wData = await weatherRes.json();
+                return { name, current: wData.current, daily: wData.daily };
+            } catch(e) { return null; }
+        }
+
+        async function renderWeather() {
+            const dest = data.destination || 'Đà Lạt';
+            const container = document.getElementById('weather-container');
+            if(!container) return;
+            
+            container.innerHTML = `<div class="text-center p-6 text-gray-500 font-medium animate-pulse"><i class="fas fa-spinner fa-spin text-2xl mb-2 text-brand-500"></i><br>Đang cập nhật thời tiết ${dest}...</div>`;
+            
+            const w = await fetchWeather(dest);
+            if(w && w.current) {
+                const code = w.current.weather_code;
+                const isDay = w.current.is_day;
+                let wInfo = weatherCodes[code] || { text: "Không rõ", icon: "fa-cloud" };
+                
+                if(!isDay && wInfo.icon === 'fa-sun') wInfo.icon = 'fa-moon';
+                if(!isDay && wInfo.icon === 'fa-cloud-sun') wInfo.icon = 'fa-cloud-moon';
+
+                const isRaining = [51,53,55,61,63,65,80,81,82,95,96,99].includes(code);
+                const bgClass = isRaining ? "from-gray-700 to-slate-800" : (isDay ? "from-blue-500 to-cyan-400" : "from-indigo-900 to-slate-800");
+
+                let forecastHtml = '';
+                if(w.daily && w.daily.time) {
+                    forecastHtml = `<div class="mt-4 pt-3 border-t border-white/20 flex overflow-x-auto gap-3 pb-1 no-scrollbar">`;
+                    for(let i=1; i<Math.min(7, w.daily.time.length); i++) {
+                        const dDate = w.daily.time[i];
+                        const dCode = w.daily.weather_code[i];
+                        const dMax = Math.round(w.daily.temperature_2m_max[i]);
+                        const dMin = Math.round(w.daily.temperature_2m_min[i]);
+                        let dInfo = weatherCodes[dCode] || { text: "Không rõ", icon: "fa-cloud" };
+                        
+                        const dateObj = new Date(dDate);
+                        const daysVi = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+                        const dayName = daysVi[dateObj.getDay()];
+                        
+                        forecastHtml += `
+                        <div class="flex-shrink-0 text-center bg-white/10 rounded-xl p-2 min-w-[60px] backdrop-blur-sm">
+                            <div class="text-[10px] font-bold opacity-80 uppercase">${dayName}</div>
+                            <div class="my-1.5"><i class="fas ${dInfo.icon} text-lg"></i></div>
+                            <div class="text-xs font-bold">${dMax}°<span class="opacity-60 text-[10px]">/${dMin}°</span></div>
+                        </div>`;
+                    }
+                    forecastHtml += `</div>`;
+                }
+
+                window.editWeatherLocation = function() {
+                    const newLoc = prompt("Nhập tên địa điểm hoặc thành phố để xem thời tiết:", dest);
+                    if(newLoc && newLoc.trim()) {
+                        data.destination = newLoc.trim();
+                        saveData();
+                        renderWeather();
+                        if(document.getElementById('inp-dest')) {
+                            document.getElementById('inp-dest').value = data.destination;
+                        }
+                    }
+                };
+
+                container.innerHTML = `
+                <div class="bg-gradient-to-br ${bgClass} rounded-2xl p-5 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.01]">
+                    <i class="fas ${wInfo.icon} absolute -right-4 -bottom-4 text-[120px] opacity-20"></i>
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="font-bold text-white/90 flex items-center gap-1.5 text-sm cursor-pointer hover:text-amber-300 transition" onclick="editWeatherLocation()" title="Đổi địa điểm">
+                                <i class="fas fa-map-marker-alt text-red-400"></i> ${w.name} 
+                                <i class="fas fa-edit opacity-60 text-[10px] ml-1"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <div class="text-5xl font-black tracking-tighter mb-1 drop-shadow-md">${Math.round(w.current.temperature_2m)}°</div>
+                                <div class="font-semibold text-base flex items-center gap-2 drop-shadow-md"><i class="fas ${wInfo.icon} text-lg"></i> ${wInfo.text}</div>
+                            </div>
+                            <div class="text-right flex flex-col gap-1.5 pl-4 py-1">
+                                <div class="text-xs bg-white/10 px-2.5 py-1.5 rounded-lg backdrop-blur-md flex items-center gap-2 shadow-sm font-medium whitespace-nowrap"><i class="fas fa-temperature-half w-3 opacity-70"></i> Cảm giác ${Math.round(w.current.apparent_temperature)}°</div>
+                                <div class="text-xs bg-white/10 px-2.5 py-1.5 rounded-lg backdrop-blur-md flex items-center gap-2 shadow-sm font-medium whitespace-nowrap"><i class="fas fa-tint w-3 opacity-70"></i> Độ ẩm ${w.current.relative_humidity_2m}%</div>
+                                <div class="text-xs bg-white/10 px-2.5 py-1.5 rounded-lg backdrop-blur-md flex items-center gap-2 shadow-sm font-medium whitespace-nowrap"><i class="fas fa-wind w-3 opacity-70"></i> Gió ${Math.round(w.current.wind_speed_10m)} km/h</div>
+                            </div>
+                        </div>
+                        ${forecastHtml}
+                    </div>
+                </div>`;
+            } else {
+                window.editWeatherLocation = function() {
+                    const newLoc = prompt("Nhập tên địa điểm hoặc thành phố để xem thời tiết:", dest);
+                    if(newLoc && newLoc.trim()) {
+                        data.destination = newLoc.trim();
+                        saveData();
+                        renderWeather();
+                    }
+                };
+                
+                container.innerHTML = `
+                    <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-700 dark:to-gray-800 p-4 rounded-2xl shadow-sm border border-blue-100 dark:border-gray-600 block transition">
+                        <div class="flex items-center gap-4 justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="bg-white dark:bg-gray-800 p-2 rounded-full shadow-sm flex-shrink-0"><i class="fas fa-cloud-sun text-4xl text-amber-500"></i></div>
+                                <div>
+                                    <div class="font-bold text-gray-800 dark:text-white text-lg">${dest}</div>
+                                    <div class="text-sm text-red-500 font-medium mt-0.5">Không tìm thấy thời tiết.</div>
+                                </div>
+                            </div>
+                            <button onclick="editWeatherLocation()" class="p-2 bg-white dark:bg-gray-700 text-blue-500 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 font-bold"><i class="fas fa-edit"></i> Đổi</button>
+                        </div>
+                    </div>`;
+            }
+        }
+
+        function renderTimeline() {
+            const tabsContainer = document.getElementById('timeline-tabs');
+            const contentContainer = document.getElementById('timeline-contents');
+            
+            tabsContainer.innerHTML = '';
+            contentContainer.innerHTML = '';
+            
+            if (!data.days) data.days = [];
+            
+            data.days.forEach((day, index) => {
+                // Render Tab
+                const btn = document.createElement('button');
+                btn.className = `tab-btn snap-start px-5 py-2.5 rounded-xl font-bold whitespace-nowrap transition-all border ${index === 0 ? 'bg-brand-600 text-white border-brand-600 active' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 shadow-sm'}`;
+                btn.setAttribute('data-target', day.id);
+                btn.innerHTML = `${day.label} <span class="font-normal text-xs opacity-80 block">(${formatDayDateForDisplay(day.date)})</span>`;
+                tabsContainer.appendChild(btn);
+                // Render Day Content
+                let eventsHtml = '';
+                if(day.events) {
+                    day.events.forEach(ev => {
+                        eventsHtml += `
+                        <div class="relative pl-14 mb-10 group">
+                            <div class="absolute left-0 top-1 w-11 h-11 bg-white dark:bg-gray-800 border-4 border-indigo-500 rounded-full flex items-center justify-center z-10 shadow-sm">
+                                <i class="fas fa-map-marker-alt text-indigo-500 text-sm"></i>
+                            </div>
+                            <div class="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 text-base md:text-lg font-black px-4 py-1.5 rounded-bl-[1.5rem] rounded-tr-2xl shadow-md border-b-2 border-l-2 border-white dark:border-gray-800 flex items-center gap-1.5">
+                                    <i class="far fa-clock text-indigo-500 dark:text-indigo-400"></i> ${ev.startTime || '--:--'} - ${ev.endTime || '--:--'}
+                                </div>
+                                
+                                <h3 class="font-black text-lg text-gray-800 dark:text-white mt-2 mb-1 pr-8">${ev.title}</h3>
+                                <div class="text-sm text-gray-600 dark:text-gray-400 flex flex-col gap-1 font-medium mb-2">
+                                    <div class="flex items-start gap-1"><i class="fas fa-map-marker-alt mt-1 text-red-500"></i> ${ev.address || 'Chưa cập nhật địa chỉ'}</div>
+                                    ${ev.area ? `<div class="mt-1"><span class="text-[11px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2.5 py-1 rounded-md font-bold inline-flex items-center gap-1 shadow-sm border border-indigo-200 dark:border-indigo-800/50"><i class="fas fa-map-signs"></i> Khu vực: ${ev.area}</span></div>` : ''}
+                                </div>
+                                <div class="mb-4">
+                                    <a href="${ev.mapLink ? ev.mapLink : (ev.address ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(ev.address) : '#')}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50 px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">
+                                        <i class="fas fa-directions text-sm"></i> Xem đường đi
+                                    </a>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                    <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-600">
+                                        <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-1"><i class="fas fa-money-bill-wave"></i> Cố định</div>
+                                        <div class="font-bold text-sm text-emerald-600 dark:text-emerald-400">${Number(ev.cost || 0).toLocaleString('vi-VN')}đ</div>
+                                    </div>
+                                </div>
+                                
+                                ${ev.subItems && ev.subItems.length > 0 ? `
+                                <div class="mb-4 space-y-2">
+                                    <div class="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500 mb-1"><i class="fas fa-list-ul"></i> Các mục phụ & Phát sinh</div>
+                                    ${ev.subItems.map(si => `
+                                    <div class="bg-blue-50/50 dark:bg-blue-900/10 p-3 rounded-xl border border-blue-100 dark:border-blue-800/30 flex justify-between items-center gap-2">
+                                        <div class="flex-1">
+                                            <div class="font-bold text-sm text-gray-800 dark:text-gray-200">${si.name}</div>
+                                            ${si.area ? `<div class="mt-1"><span class="text-[10px] bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1"><i class="fas fa-map-signs"></i> ${si.area}</span></div>` : ''}
+                                            ${si.mapLink ? `<a href="${si.mapLink}" target="_blank" class="text-[10px] text-blue-500 hover:underline flex items-center gap-1 mt-0.5"><i class="fas fa-map-marker-alt"></i> Xem bản đồ</a>` : ''}
+                                        </div>
+                                        ${Number(si.cost) > 0 ? `<div class="font-bold text-sm text-emerald-600 dark:text-emerald-400">+${Number(si.cost).toLocaleString('vi-VN')}đ</div>` : ''}
+                                    </div>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                                
+                                ${ev.note ? `
+                                <div class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800/50 flex gap-3 text-sm">
+                                    <i class="fas fa-exclamation-triangle text-amber-500 mt-0.5"></i>
+                                    <span class="text-amber-800 dark:text-amber-200 font-medium leading-tight">${ev.note}</span>
+                                </div>
+                                ` : ''}
+                                
+                                <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+                                    <button onclick="openEventModal('${day.id}', '${ev.id}')" class="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 font-bold transition flex items-center gap-1.5"><i class="fas fa-edit"></i> Sửa</button>
+                                    <button onclick="deleteEvent('${day.id}', '${ev.id}')" class="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 font-bold transition flex items-center gap-1.5"><i class="fas fa-trash"></i> Xóa</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                }
+
+                const dayDiv = document.createElement('div');
+                dayDiv.id = day.id;
+                dayDiv.className = `tab-content relative ${index === 0 ? '' : 'hidden'}`;
+                
+                dayDiv.innerHTML = `<div class="timeline-line"></div>${eventsHtml}`;
+                
+                // Add Event Button for this day
+                dayDiv.innerHTML += `
+                <div class="pl-14 mb-4 relative">
+                    <button onclick="openEventModal('${day.id}')" class="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 rounded-2xl p-3 font-bold transition-all">
+                        <i class="fas fa-plus mr-2"></i> Thêm lịch trình vào ${day.label}
+                    </button>
+                </div>
+                <div class="pl-14 mb-10 text-right">
+                    <button onclick="deleteDay('${day.id}')" class="text-xs text-red-400 hover:text-red-600"><i class="fas fa-trash-alt"></i> Xóa toàn bộ ngày này</button>
+                </div>`;
+
+                contentContainer.appendChild(dayDiv);
+            });
+
+            if(data.days.length === 0) {
+                contentContainer.innerHTML = `<div class="text-center py-10 text-gray-400"><i class="fas fa-folder-open text-4xl mb-3"></i><p>Chưa có lịch trình nào. Hãy bấm nút + bên dưới để thêm.</p></div>`;
+            }
+
+            // Bind tab clicks
+            const newTabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            newTabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    newTabBtns.forEach(b => {
+                        b.classList.remove('bg-brand-600', 'text-white', 'border-brand-600');
+                        b.classList.add('bg-white', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700');
+                    });
+                    btn.classList.remove('bg-white', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700');
+                    btn.classList.add('bg-brand-600', 'text-white', 'border-brand-600');
+
+                    const targetId = btn.getAttribute('data-target');
+                    tabContents.forEach(content => {
+                        if(content.id === targetId) {
+                            content.classList.remove('hidden');
+                            content.style.opacity = 0;
+                            setTimeout(() => {
+                                content.style.transition = 'opacity 0.3s ease-in';
+                                content.style.opacity = 1;
+                            }, 10);
+                        } else {
+                            content.classList.add('hidden');
+                        }
+                    });
+                });
+            });
+        }
+
+        function renderExpenses() {
+            const list = document.getElementById('expense-list');
+            
+            let totalPerPerson = 0;
+            let html = '';
+            let hasExpense = false;
+            
+            const mCount = data.memberCount || 1;
+            
+            if (data.days) {
+                data.days.forEach(day => {
+                    if(day.events) {
+                        day.events.forEach(ev => {
+                            let amount = Number(ev.cost || 0);
+                            if (ev.subItems) {
+                                ev.subItems.forEach(si => amount += Number(si.cost || 0));
+                            }
+                            
+                            if (amount > 0) {
+                                hasExpense = true;
+                                const perPerson = Math.ceil(amount / mCount);
+                                totalPerPerson += perPerson;
+                                
+                                html += `
+                                <div class="flex justify-between items-end border-b border-gray-700 pb-3 relative group">
+                                    <div class="flex-1 pr-2">
+                                        <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">${day.label}</div>
+                                        <div class="font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                            <span>${ev.title} ${ev.subItems && ev.subItems.length > 0 ? '<span class="text-xs text-brand-400">(Có phát sinh)</span>' : ''}</span>
+                                            <span class="text-[10px] bg-gray-700/50 text-gray-400 px-2 py-0.5 rounded-full whitespace-nowrap">Tổng: ${amount.toLocaleString('vi-VN')}đ</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold text-lg text-emerald-400">${perPerson.toLocaleString('vi-VN')}đ</div>
+                                        <div class="text-[10px] text-gray-500">/người</div>
+                                    </div>
+                                </div>`;
+                            }
+                        });
+                    }
+                });
+            }
+            
+            if(!hasExpense) {
+                html = `<div class="text-center py-4 text-gray-400 text-sm">Chưa có dữ liệu chi phí trong lịch trình.</div>`;
+            }
+
+            list.innerHTML = html;
+            document.getElementById('render-expense-total').innerText = totalPerPerson.toLocaleString('vi-VN') + 'đ';
+        }
+
+        function renderAll() {
+            renderHeader();
+            renderWeather();
+            renderTimeline();
+            renderExpenses();
+        }
+
+        // ---------------------------------
+        // MODALS & ACTIONS (CRUD)
+        // ---------------------------------
+        function openModal(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            setTimeout(() => { el.querySelector('.modal-sheet').classList.remove('translate-y-full'); }, 10);
+        }
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            el.querySelector('.modal-sheet').classList.add('translate-y-full');
+            setTimeout(() => { el.classList.add('hidden'); }, 300);
+        }
+
+        function saveInfo() {
+            data.tripName = document.getElementById('inp-trip-name').value;
+            data.memberCount = parseInt(document.getElementById('inp-member-count').value) || 1;
+            data.startDate = document.getElementById('inp-start-date').value;
+            data.endDate = document.getElementById('inp-end-date').value;
+            data.destination = document.getElementById('inp-dest').value;
+            data.countdownTarget = document.getElementById('inp-countdown').value;
+            saveData();
+            closeModal('modal-info');
+        }
+
+        function addDay() {
+            const label = document.getElementById('inp-day-label').value;
+            const date = document.getElementById('inp-day-date').value;
+
+            if(!label) return alert("Vui lòng nhập tên ngày!");
+            
+            const newDay = {
+                id: 'day_' + Date.now(),
+                label: label,
+                date: date,
+                events: []
+            };
+
+            if(!data.days) data.days = [];
+            data.days.push(newDay);
+            saveData();
+            
+            document.getElementById('inp-day-label').value = '';
+            document.getElementById('inp-day-date').value = '';
+            
+            closeModal('modal-day');
+        }
+        
+        function deleteDay(dayId) {
+            if(confirm("Bạn có chắc muốn xóa ngày này? (Sẽ xóa toàn bộ lịch trình trong ngày)")) {
+                data.days = data.days.filter(d => d.id !== dayId);
+                saveData();
+            }
+        }
+
+        let currentDayId = null;
+        let currentEventId = null;
+        let currentSubItems = [];
+        
+        function renderSubItemFields() {
+            const container = document.getElementById('sub-items-container');
+            if(!container) return;
+            container.innerHTML = '';
+            currentSubItems.forEach((item, index) => {
+                container.innerHTML += `
+                <div class="p-3 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800 relative">
+                    <button type="button" onclick="removeSubItemField(${index})" class="absolute top-2 right-2 text-gray-400 hover:text-red-500 w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-gray-700 shadow-sm"><i class="fas fa-times text-xs"></i></button>
+                    <input type="text" placeholder="Tên mục phụ (VD: Lẩu Bò)" value="${item.name || ''}" onchange="updateSubItem(${index}, 'name', this.value)" class="w-full p-2 mb-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 text-sm dark:text-white pr-8">
+                    <div class="flex gap-2 mb-2">
+                        <select onchange="updateSubItem(${index}, 'area', this.value)" class="flex-1 p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 text-sm dark:text-white area-selector" data-current="${item.area || ''}"></select>
+                        <button type="button" onclick="addNewArea()" class="bg-indigo-100 text-indigo-700 font-bold px-3 rounded-lg hover:bg-indigo-200 transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="url" placeholder="Link Map" value="${item.mapLink || ''}" onchange="updateSubItem(${index}, 'mapLink', this.value)" class="w-1/2 p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 text-sm dark:text-white">
+                        <input type="number" placeholder="Chi phí thêm" value="${item.cost || ''}" onchange="updateSubItem(${index}, 'cost', this.value)" class="w-1/2 p-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 text-sm dark:text-white">
+                    </div>
+                </div>
+                `;
+            });
+            renderAreaOptions();
+        }
+        window.renderSubItemFields = renderSubItemFields;
+        
+        function addSubItemField() {
+            currentSubItems.push({ name: '', area: '', mapLink: '', cost: '' });
+            renderSubItemFields();
+        }
+        window.addSubItemField = addSubItemField;
+        
+        function removeSubItemField(index) {
+            currentSubItems.splice(index, 1);
+            renderSubItemFields();
+        }
+        window.removeSubItemField = removeSubItemField;
+        
+        function updateSubItem(index, field, value) {
+            currentSubItems[index][field] = value;
+        }
+        window.updateSubItem = updateSubItem;
+
+        function openEventModal(dayId, eventId = null) {
+            renderAreaOptions();
+            currentDayId = dayId;
+            currentEventId = eventId;
+            
+            const titleEl = document.querySelector('#modal-event h3');
+            const btnEl = document.getElementById('btn-save-event');
+            
+            if (eventId) {
+                titleEl.innerText = 'Sửa Lịch Trình';
+                btnEl.innerText = 'Lưu thay đổi';
+                
+                const day = data.days.find(d => d.id === dayId);
+                const ev = day.events.find(e => e.id === eventId);
+                
+                document.getElementById('inp-ev-title').value = ev.title || '';
+                document.getElementById('inp-ev-start').value = ev.startTime || '';
+                document.getElementById('inp-ev-end').value = ev.endTime || '';
+                document.getElementById('inp-ev-addr').value = ev.address || '';
+                document.getElementById('inp-ev-area').value = ev.area || '';
+                document.getElementById('inp-ev-maplink').value = ev.mapLink || '';
+                document.getElementById('inp-ev-info').value = ev.infoContent || '';
+                document.getElementById('inp-ev-cost').value = ev.cost || '';
+                document.getElementById('inp-ev-note').value = ev.note || '';
+                currentSubItems = ev.subItems ? JSON.parse(JSON.stringify(ev.subItems)) : [];
+            } else {
+                titleEl.innerText = 'Thêm Lịch Trình';
+                btnEl.innerText = 'Thêm vào lịch trình';
+                document.querySelectorAll('#modal-event input').forEach(inp => inp.value = '');
+                currentSubItems = [];
+            }
+            
+            renderSubItemFields();
+            openModal('modal-event');
+        }
+
+        function addEvent() {
+            if(!currentDayId) return;
+            const title = document.getElementById('inp-ev-title').value;
+            if(!title) return alert("Vui lòng nhập tên hoạt động!");
+
+            const day = data.days.find(d => d.id === currentDayId);
+            if(!day) return;
+            if(!day.events) day.events = [];
+
+            if (currentEventId) {
+                const ev = day.events.find(e => e.id === currentEventId);
+                if (ev) {
+                    ev.title = title;
+                    ev.startTime = document.getElementById('inp-ev-start').value;
+                    ev.endTime = document.getElementById('inp-ev-end').value;
+                    ev.address = document.getElementById('inp-ev-addr').value;
+                    ev.area = document.getElementById('inp-ev-area').value;
+                    ev.mapLink = document.getElementById('inp-ev-maplink').value;
+                    ev.infoContent = document.getElementById('inp-ev-info').value || 'Tự do';
+                    ev.cost = Number(document.getElementById('inp-ev-cost').value || 0);
+                    ev.note = document.getElementById('inp-ev-note').value;
+                    ev.subItems = currentSubItems.filter(i => i.name.trim() !== '');
+                }
+            } else {
+                const newEvent = {
+                    id: 'ev_' + Date.now(),
+                    title: title,
+                    startTime: document.getElementById('inp-ev-start').value,
+                    endTime: document.getElementById('inp-ev-end').value,
+                    address: document.getElementById('inp-ev-addr').value,
+                    area: document.getElementById('inp-ev-area').value,
+                    cost: Number(document.getElementById('inp-ev-cost').value || 0),
+                    note: document.getElementById('inp-ev-note').value,
+                    infoType: 'Thông tin',
+                    infoContent: document.getElementById('inp-ev-info').value || 'Tự do',
+                    mapLink: document.getElementById('inp-ev-maplink').value || '',
+                    subItems: currentSubItems.filter(i => i.name.trim() !== '')
+                };
+                day.events.push(newEvent);
+            }
+            
+            // Tự động sắp xếp các hoạt động trong ngày theo giờ bắt đầu
+            day.events.sort((a, b) => {
+                const timeA = a.startTime || "24:00";
+                const timeB = b.startTime || "24:00";
+                return timeA.localeCompare(timeB);
+            });
+            
+            saveData();
+            closeModal('modal-event');
+        }
+        
+        function deleteEvent(dayId, eventId) {
+            if(confirm("Bạn muốn xóa hoạt động này?")) {
+                const day = data.days.find(d => d.id === dayId);
+                if(day) {
+                    day.events = day.events.filter(e => e.id !== eventId);
+                    saveData();
+                }
+            }
+        }
+
+        // ---------------------------------
+        // STARTUP & EXPORTS
+        // ---------------------------------
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.saveInfo = saveInfo;
+        window.addDay = addDay;
+        window.deleteDay = deleteDay;
+        window.openEventModal = openEventModal;
+        let currentCategory = 'Quán ăn';
+        let libraryPickerMode = null; // null, 'event', 'subitem'
+        let editingPlaceId = null;
+
+        function renderLibrary() {
+            if(!data.places) data.places = [];
+            const tabs = ['Quán ăn', 'Cafe', 'Tham quan', 'Khác'];
+            const tabHtml = tabs.map(t => `<button onclick="switchCategory('${t}')" class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold border transition ${currentCategory === t ? 'bg-amber-500 text-white border-amber-500 shadow-md' : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-700 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'}">${t}</button>`).join('');
+            document.getElementById('library-tabs').innerHTML = tabHtml;
+            
+            const filtered = data.places.filter(p => p.category === currentCategory);
+            let listHtml = '';
+            if (filtered.length === 0) {
+                listHtml = `<div class="text-center py-8 text-gray-400 text-sm">Chưa có địa điểm nào trong mục này.</div>`;
+            } else {
+                const grouped = {};
+                filtered.forEach(p => {
+                    const area = p.area || 'Chưa phân khu';
+                    if(!grouped[area]) grouped[area] = [];
+                    grouped[area].push(p);
+                });
+                
+                const sortedAreas = Object.keys(grouped).sort((a, b) => {
+                    if (a === 'Chưa phân khu') return 1;
+                    if (b === 'Chưa phân khu') return -1;
+                    return a.localeCompare(b);
+                });
+                
+                sortedAreas.forEach(area => {
+                    listHtml += `<div class="mt-5 mb-3 inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-3 py-1.5 rounded-lg font-black text-sm shadow-sm border border-indigo-200 dark:border-indigo-800/50"><i class="fas fa-map-signs"></i> ${area}</div>`;
+                    
+                    grouped[area].sort((a, b) => (Number(a.cost) || 0) - (Number(b.cost) || 0)).forEach(p => {
+                        const btnActionHtml = libraryPickerMode 
+                            ? `<button onclick="pickPlace('${p.id}')" class="bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-200 transition shadow-sm"><i class="fas fa-check"></i> Chọn</button>`
+                            : `<button onclick="editPlace('${p.id}')" class="bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-300 dark:hover:bg-gray-500 transition shadow-sm"><i class="fas fa-edit"></i> Sửa</button>`;
+
+                        listHtml += `
+                        <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex flex-col gap-2 relative mb-3">
+                            <div class="flex justify-between items-start gap-2">
+                                <div class="font-bold text-gray-800 dark:text-white text-base leading-tight flex flex-wrap items-center gap-2">
+                                    ${p.name}
+                                    ${p.area ? `<span class="text-[9px] bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 whitespace-nowrap"><i class="fas fa-map-signs"></i> ${p.area}</span>` : ''}
+                                </div>
+                                ${btnActionHtml}
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1"><i class="fas fa-map-marker-alt mt-1 text-red-500"></i> <span class="leading-tight">${p.address || 'Chưa cập nhật'}</span></div>
+                            <div class="flex justify-between items-end mt-1">
+                                <div class="font-bold text-emerald-600 dark:text-emerald-400 text-sm"><i class="fas fa-money-bill-wave"></i> ${Number(p.cost||0).toLocaleString('vi-VN')}đ</div>
+                                ${p.mapLink ? `<a href="${p.mapLink}" target="_blank" class="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 transition"><i class="fas fa-directions"></i> Chỉ đường</a>` : ''}
+                            </div>
+                        </div>`;
+                    });
+                });
+            }
+            document.getElementById('library-list').innerHTML = listHtml;
+        }
+
+        function openLibrary(mode = null) {
+            libraryPickerMode = mode;
+            renderLibrary();
+            openModal('modal-library');
+        }
+
+        function switchCategory(cat) {
+            currentCategory = cat;
+            renderLibrary();
+        }
+
+        function openPlaceForm() {
+            renderAreaOptions();
+            editingPlaceId = null;
+            document.getElementById('place-form-title').innerText = 'Thêm Địa Điểm';
+            document.getElementById('inp-pl-cat').value = currentCategory;
+            document.getElementById('inp-pl-name').value = '';
+            document.getElementById('inp-pl-addr').value = '';
+            document.getElementById('inp-pl-area').value = '';
+            document.getElementById('inp-pl-map').value = '';
+            document.getElementById('inp-pl-cost').value = '';
+            document.getElementById('btn-del-place').classList.add('hidden');
+            openModal('modal-place-form');
+        }
+
+        function editPlace(id) {
+            const p = data.places.find(x => x.id === id);
+            if(!p) return;
+            renderAreaOptions();
+            editingPlaceId = id;
+            document.getElementById('place-form-title').innerText = 'Sửa Địa Điểm';
+            document.getElementById('inp-pl-cat').value = p.category;
+            document.getElementById('inp-pl-name').value = p.name;
+            document.getElementById('inp-pl-addr').value = p.address || '';
+            document.getElementById('inp-pl-area').value = p.area || '';
+            document.getElementById('inp-pl-map').value = p.mapLink || '';
+            document.getElementById('inp-pl-cost').value = p.cost;
+            document.getElementById('btn-del-place').classList.remove('hidden');
+            openModal('modal-place-form');
+        }
+
+        function savePlace() {
+            if(!data.places) data.places = [];
+            const pData = {
+                category: document.getElementById('inp-pl-cat').value,
+                name: document.getElementById('inp-pl-name').value,
+                address: document.getElementById('inp-pl-addr').value,
+                area: document.getElementById('inp-pl-area').value,
+                mapLink: document.getElementById('inp-pl-map').value,
+                cost: Number(document.getElementById('inp-pl-cost').value) || 0
+            };
+            if(!pData.name) return alert("Vui lòng nhập tên!");
+            
+            if(editingPlaceId) {
+                const p = data.places.find(x => x.id === editingPlaceId);
+                if(p) Object.assign(p, pData);
+            } else {
+                pData.id = 'pl_' + Date.now();
+                data.places.push(pData);
+            }
+            
+            saveData();
+            currentCategory = pData.category;
+            renderLibrary();
+            closeModal('modal-place-form');
+        }
+
+        function deletePlace() {
+            if(!editingPlaceId) return;
+            if(confirm("Bạn muốn xóa địa điểm này khỏi Sổ tay?")) {
+                data.places = data.places.filter(x => x.id !== editingPlaceId);
+                saveData();
+                renderLibrary();
+                closeModal('modal-place-form');
+            }
+        }
+
+        function pickPlace(id) {
+            const p = data.places.find(x => x.id === id);
+            if(!p) return;
+            
+            const mCount = data.memberCount && data.memberCount > 0 ? data.memberCount : 1;
+            const totalCost = (Number(p.cost) || 0) * mCount;
+            
+            if(libraryPickerMode === 'event') {
+                document.getElementById('inp-ev-title').value = p.name;
+                document.getElementById('inp-ev-addr').value = p.address || '';
+                document.getElementById('inp-ev-area').value = p.area || '';
+                document.getElementById('inp-ev-maplink').value = p.mapLink || '';
+                document.getElementById('inp-ev-cost').value = totalCost;
+            } else if (libraryPickerMode === 'subitem') {
+                currentSubItems.push({
+                    name: p.name,
+                    area: p.area || '',
+                    mapLink: p.mapLink,
+                    cost: totalCost
+                });
+                renderSubItemFields();
+            }
+            closeModal('modal-library');
+        }
+
+        window.openLibrary = openLibrary;
+        window.switchCategory = switchCategory;
+        window.openPlaceForm = openPlaceForm;
+        window.editPlace = editPlace;
+        window.savePlace = savePlace;
+        window.deletePlace = deletePlace;
+        window.pickPlace = pickPlace;
+
+        function renderAreaOptions() {
+            if(!data.areas) data.areas = ["Chưa phân khu"];
+            const html = data.areas.map(a => `<option value="${a}">${a}</option>`).join('');
+            document.querySelectorAll('.area-selector').forEach(sel => {
+                const currentVal = sel.dataset.current || sel.value;
+                sel.innerHTML = html;
+                if(data.areas.includes(currentVal)) {
+                    sel.value = currentVal;
+                }
+            });
+        }
+        window.renderAreaOptions = renderAreaOptions;
+
+        function addNewArea() {
+            const newArea = prompt("Nhập tên khu vực mới (VD: Khu Chợ Mới):");
+            if(newArea && newArea.trim() !== '') {
+                const cleanName = newArea.trim();
+                if(!data.areas) data.areas = ["Chưa phân khu"];
+                if(!data.areas.includes(cleanName)) {
+                    data.areas.push(cleanName);
+                    saveData();
+                    renderAreaOptions();
+                    
+                    if(!document.getElementById('modal-place-form').classList.contains('hidden')) {
+                        document.getElementById('inp-pl-area').value = cleanName;
+                    } else if(!document.getElementById('modal-event').classList.contains('hidden')) {
+                        document.getElementById('inp-ev-area').value = cleanName;
+                    }
+                    
+                    // For subitems, we just added a new area, but we can't easily auto-select it for the specific subitem 
+                    // without knowing which one clicked it. But re-rendering options is enough.
+                } else {
+                    alert("Khu vực này đã tồn tại!");
+                }
+            }
+        }
+        window.addNewArea = addNewArea;
+
+        function deleteArea(selectId) {
+            const areaToDelete = document.getElementById(selectId).value;
+            if(!areaToDelete || areaToDelete === 'Chưa phân khu') {
+                return alert("Không thể xóa khu vực mặc định!");
+            }
+            if(confirm(`Bạn có chắc muốn xóa khu vực "${areaToDelete}" không?\nLưu ý: Tất cả địa điểm đang thuộc khu vực này sẽ trở thành "Chưa phân khu".`)) {
+                data.areas = data.areas.filter(a => a !== areaToDelete);
+                
+                if(data.places) {
+                    data.places.forEach(p => {
+                        if(p.area === areaToDelete) p.area = '';
+                    });
+                }
+                
+                if(data.days) {
+                    data.days.forEach(d => {
+                        if(d.events) {
+                            d.events.forEach(ev => {
+                                if(ev.area === areaToDelete) ev.area = '';
+                                if(ev.subItems) {
+                                    ev.subItems.forEach(si => {
+                                        if(si.area === areaToDelete) si.area = '';
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                currentSubItems.forEach(si => {
+                    if(si.area === areaToDelete) si.area = '';
+                });
+                
+                saveData();
+                renderAreaOptions();
+                renderLibrary();
+                if(!document.getElementById('modal-event').classList.contains('hidden')) {
+                    renderSubItemFields();
+                }
+            }
+        }
+        window.deleteArea = deleteArea;
+
+        window.deleteEvent = deleteEvent;
+        window.addEvent = addEvent;
+
+        window.renderDashboard = function() {
+            document.getElementById('app-dashboard').classList.remove('hidden');
+            document.getElementById('app-trip-detail').classList.add('hidden');
+            
+            const container = document.getElementById('dashboard-trips');
+            let html = '';
+            
+            if(Object.keys(appData).length === 0) {
+                html = `<div class="text-center py-10 text-gray-500 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700">Chưa có chuyến đi nào.</div>`;
+            } else {
+                for(let tripId in appData) {
+                    const trip = appData[tripId];
+                    const isPrivate = trip.isPrivate === true || trip.isPrivate === 'true';
+                    html += `
+                    <div class="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-200 dark:border-gray-700 flex justify-between items-center group relative overflow-hidden transition hover:-translate-y-1 hover:shadow-md cursor-pointer" onclick="openTrip('${tripId}')">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-black text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                ${trip.tripName || 'Chuyến đi không tên'} 
+                                ${isPrivate ? '<i class="fas fa-lock text-brand-500 text-sm"></i>' : ''}
+                            </h3>
+                            <div class="text-sm text-gray-500 mt-1"><i class="far fa-calendar-alt"></i> Dự kiến: ${trip.startDate || 'Chưa định ngày'}</div>
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteTrip('${tripId}')" class="w-10 h-10 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition z-10"><i class="fas fa-trash"></i></button>
+                    </div>
+                    `;
+                }
+            }
+            container.innerHTML = html;
+        };
+
+        window.openTrip = function(tripId) {
+            const trip = appData[tripId];
+            if(!trip) return;
+            
+            const isPrivate = trip.isPrivate === true || trip.isPrivate === 'true';
+            if(isPrivate) {
+                const unlockedPass = localStorage.getItem('unlocked_trip_' + tripId);
+                if(unlockedPass !== trip.password) {
+                    const passInput = prompt("Chuyến đi này đã được khóa.\\nVui lòng nhập mật khẩu để mở:");
+                    if(passInput === null) return;
+                    if(passInput !== trip.password) {
+                        alert("Mật khẩu không chính xác!");
+                        return;
+                    }
+                    localStorage.setItem('unlocked_trip_' + tripId, passInput);
+                }
+            }
+            
+            currentTripId = tripId;
+            data = trip;
+            
+            document.getElementById('inp-trip-name').value = data.tripName || '';
+            document.getElementById('inp-start-date').value = data.startDate || '';
+            if(document.getElementById('inp-dest')) document.getElementById('inp-dest').value = data.destination || '';
+            if(document.getElementById('inp-member-count')) document.getElementById('inp-member-count').value = data.memberCount || 1;
+            
+            document.getElementById('app-dashboard').classList.add('hidden');
+            document.getElementById('app-trip-detail').classList.remove('hidden');
+            
+            renderAll();
+        };
+
+        window.closeTrip = function() {
+            currentTripId = null;
+            document.getElementById('app-trip-detail').classList.add('hidden');
+            document.getElementById('app-dashboard').classList.remove('hidden');
+            renderDashboard();
+        };
+
+        window.createNewTrip = function() {
+            const name = document.getElementById('new-trip-name').value;
+            const date = document.getElementById('new-trip-date').value;
+            const isPrivate = document.getElementById('new-trip-private').checked;
+            const pass = document.getElementById('new-trip-password').value;
+            
+            if(!name) return alert("Vui lòng nhập tên chuyến đi!");
+            if(isPrivate && !pass) return alert("Vui lòng nhập mật khẩu!");
+            
+            const tripId = 'trip_' + Date.now();
+            
+            const newTrip = {
+                id: tripId,
+                tripName: name,
+                startDate: date,
+                isPrivate: isPrivate,
+                password: pass || '',
+                days: [],
+                places: [],
+                areas: []
+            };
+            
+            if(isPrivate) {
+                localStorage.setItem('unlocked_trip_' + tripId, pass);
+            }
+            
+            appData[tripId] = newTrip;
+            currentTripId = tripId;
+            data = newTrip;
+            
+            document.getElementById('inp-trip-name').value = name;
+            document.getElementById('inp-start-date').value = date;
+            
+            set(dbRef, appData);
+            
+            closeModal('modal-new-trip');
+            
+            document.getElementById('new-trip-name').value = '';
+            document.getElementById('new-trip-date').value = '';
+            document.getElementById('new-trip-private').checked = false;
+            document.getElementById('new-trip-password').value = '';
+            document.getElementById('div-trip-pass').classList.add('hidden');
+            
+            document.getElementById('app-dashboard').classList.add('hidden');
+            document.getElementById('app-trip-detail').classList.remove('hidden');
+        };
+
+        window.deleteTrip = function(tripId) {
+            if(confirm("Bạn có chắc chắn muốn xóa chuyến đi này không?")) {
+                delete appData[tripId];
+                set(dbRef, appData);
+                if(currentTripId === tripId) {
+                    closeTrip();
+                } else {
+                    renderDashboard();
+                }
+            }
+        };
+
+        initData(); // Dữ liệu sẽ tự load qua onValue
+
+        // Theme Toggle Setup
+        const themeToggleBtn = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            htmlElement.classList.add('dark');
+        }
+        themeToggleBtn.addEventListener('click', () => {
+            htmlElement.classList.toggle('dark');
+            localStorage.setItem('theme', htmlElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        // Countdown Timer Loop
+        const cdElements = {
+            days: document.getElementById("cd-days"),
+            hours: document.getElementById("cd-hours"),
+            mins: document.getElementById("cd-mins"),
+            secs: document.getElementById("cd-secs")
+        };
+        const updateCountdown = setInterval(() => {
+            if(!targetDate) return;
+            const now = new Date().getTime();
+            const distance = targetDate - now;
+
+            if (distance < 0) {
+                Object.values(cdElements).forEach(el => el.innerText = "00");
+                return;
+            }
+
+            cdElements.days.innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            cdElements.hours.innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            cdElements.mins.innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            cdElements.secs.innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }, 1000);
+
+    </script>
+</body>
+</html>
+

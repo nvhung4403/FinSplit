@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Tổng hợp Công nợ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css?v=100">
+    <link rel="stylesheet" href="payment-summary.css?v=100">
+</head>
+
+<body class="dark-mode">
+
+    <h1 id="pageTitle" class="main-title">Các khoản cần thanh toán</h1>
+    <div id="totalDebtContainer"></div>
+    <div id="historyCardContainer" class="history-card-container"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, get, onValue, remove, set } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyD1b0VVYy297LzrfPd4S2faljsgmNfvzEk", authDomain: "hung-355812.firebaseapp.com", databaseURL: "https://hung-355812-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "hung-355812", storageBucket: "hung-355812.appspot.com", messagingSenderId: "788577107540", appId: "1:788577107540:web:ca5b149d5e5a45bba937c1", measurementId: "G-JPNZC88YFG" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const payer = urlParams.get('payer');
+        const container = document.getElementById('historyCardContainer');
+        const totalContainer = document.getElementById('totalDebtContainer');
+        let paidStatus = {};
+        let allHistoryData = {};
+
+        if (document.getElementById('pageTitle') && payer) document.getElementById('pageTitle').textContent += ` của ${payer}`;
+
+        const normalizeName = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+        const fmtMoney = num => Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + 'đ';
+        const parseInputToNumber = str => { if (!str) return 0; const digits = String(str).replace(/[^0-9]/g, ''); if (!digits) return 0; let num = parseInt(digits, 10); if (num < 1000) num *= 1000; return num; };
+
+        function calculateDebtForHistory(historyData) {
+            const pair = {}; if (!historyData) return {};
+            const items = Array.isArray(historyData) ? historyData : Object.values(historyData);
+            items.forEach(item => {
+                if (!item) return;
+                const amount = parseInputToNumber(item.amount);
+                const bens = (item.bens || []).filter(b => b.checked);
+                if (bens.length === 0) return;
+                const totalOwn = bens.reduce((s, b) => s + parseInputToNumber(b.part), 0);
+                const remain = Math.max(amount - totalOwn, 0);
+                const totalGuests = (item.bens || []).reduce((s, b) => s + (parseInt(b.guestCount) || 0), 0);
+                const tParts = bens.length + totalGuests;
+                const share = tParts > 0 ? remain / tParts : 0;
+                (item.bens || []).forEach(b => {
+                    if (!b.checked && !(parseInt(b.guestCount) > 0)) return;
+                    let pay = (b.checked ? (parseInputToNumber(b.part) + share) : 0);
+                    const gCount = parseInt(b.guestCount) || 0;
+                    if (gCount > 0) { pay += share * gCount; }
+                    if (pay > 0 && item.payer !== b.name) {
+                        pair[b.name + '|' + item.payer] = (pair[b.name + '|' + item.payer] || 0) + pay;
+                    }
+                });
+            });
+            const net = {}; const done = new Set();
+            Object.keys(pair).forEach(k => {
+                if (done.has(k)) return;
+                const [f, t] = k.split('|'); const rev = t + '|' + f; const a = pair[k] || 0, b = pair[rev] || 0;
+                if (a > b) { if (!net[t]) net[t] = {}; net[t][f] = a - b; } else if (b > a) { if (!net[f]) net[f] = {}; net[f][t] = b - a; }
+                done.add(k); done.add(rev);
+            });
+            return net;
+        }
+
+        // --- TÍNH TOÁN BÙ TRỪ ---
+        function processAllDebts(allHistory, viewer) {
+            let myDebts = []; let creditsAvailable = {};
+            const sortedHistoryIds = Object.keys(allHistory).sort((a, b) => a - b);
+
+            sortedHistoryIds.forEach(hId => {
+                const record = allHistory[hId];
+                if (!record.data) return;
+                const debts = calculateDebtForHistory(record.data);
+                const title = record.title || `Bill ${hId}`;
+
+                for (const receiver in debts) {
+                    if (debts[receiver][viewer]) {
+                        const amount = debts[receiver][viewer];
+                        const payId = `${hId}__${normalizeName(viewer)}__${normalizeName(receiver)}`;
+                        const status = paidStatus[payId];
+                        if (amount >= 100) {
+                            myDebts.push({
+                                historyId: hId, title: title, person: receiver,
+                                originalAmount: amount, finalAmount: amount, payId: payId,
+                                statusInDb: status, notes: [], consumedReversePayIds: []
+                            });
+                        }
+                    }
+                }
+                if (debts[viewer]) {
+                    for (const debtor in debts[viewer]) {
+                        const amount = debts[viewer][debtor];
+                        const payId = `${hId}__${normalizeName(debtor)}__${normalizeName(viewer)}`;
+                        const status = paidStatus[payId];
+                        if (amount >= 100 && status !== true) {
+                            if (!creditsAvailable[debtor]) creditsAvailable[debtor] = [];
+                            creditsAvailable[debtor].push({ title: title, amount: amount, payId: payId });
+                        }
+                    }
+                }
+            });
+
+            myDebts.forEach(debt => {
+                if (debt.statusInDb === true) { debt.finalAmount = 0; return; }
+                const creditor = debt.person;
+                if (creditsAvailable[creditor] && creditsAvailable[creditor].length > 0) {
+                    for (let i = 0; i < creditsAvailable[creditor].length; i++) {
+                        let creditBill = creditsAvailable[creditor][i];
+                        if (debt.finalAmount <= 0) break;
+                        if (creditBill.amount <= 0) continue;
+                        const deduction = Math.min(debt.finalAmount, creditBill.amount);
+                        debt.finalAmount -= deduction;
+                        creditBill.amount -= deduction;
+                        debt.notes.push(`Trừ ${fmtMoney(deduction)} (từ ${creditBill.title})`);
+                        // Theo dõi payId ngược lại đã dùng để bù trừ
+                        if (creditBill.payId) debt.consumedReversePayIds.push(creditBill.payId);
+                    }
+                }
+            });
+            myDebts.sort((a, b) => b.historyId - a.historyId);
+            return myDebts;
+        }
+
+        async function renderHistoryDebts() {
+            const snapshot = await get(ref(db, 'history'));
+            if (!snapshot.exists()) { container.innerHTML = '<div id="no-debt-message">Chưa có lịch sử.</div>'; return; }
+            allHistoryData = snapshot.val();
+            updateUI();
+        }
+
+        function updateUI() {
+            container.innerHTML = ''; totalContainer.innerHTML = '';
+            const processedDebts = processAllDebts(allHistoryData, payer);
+
+            // TÍNH TỔNG (ĐỂ TRUYỀN SANG TRANG THANH TOÁN)
+            let totalFinal = 0;
+            let totalOriginal = 0;
+            let aggregatedNotes = [];
+
+            // Gom nhóm để hiển thị trong ô Tổng
+            let displayMap = {};
+            processedDebts.forEach(d => {
+                if (d.statusInDb !== true && d.finalAmount > 0) {
+                    totalFinal += d.finalAmount;
+                    totalOriginal += d.originalAmount;
+
+                    // Gom theo người nhận
+                    displayMap[d.person] = (displayMap[d.person] || 0) + d.finalAmount;
+
+                    if (d.notes.length) aggregatedNotes.push(...d.notes);
+                }
+            });
+
+            // RENDER Ô TỔNG NỢ
+            if (totalFinal > 0) {
+                const totalCard = document.createElement('div'); totalCard.className = 'history-card total-card';
+                let listHtml = '';
+                Object.keys(displayMap).forEach(r => {
+                    listHtml += `<li class="debt-item"><span class="payment-status"><i data-lucide="x-circle"></i></span><span><strong>${r}</strong>: ${fmtMoney(displayMap[r])}</span></li>`;
+                });
+                totalCard.innerHTML = `<div class="history-card-header"><h2>Tổng nợ thực tế </h2></div><ul class="debt-list">${listHtml}</ul>`;
+
+                const btnWrap = document.createElement('div'); btnWrap.className = 'pay-button-wrapper';
+                // Hiển thị số tiền ĐÃ TRỪ NỢ
+                btnWrap.innerHTML = `<button class="btn btn-primary" id="payTotalBtn">${fmtMoney(totalFinal)} • Thanh toán tổng</button>`;
+                totalCard.appendChild(btnWrap);
+                totalContainer.appendChild(totalCard);
+
+                // --- SỬA LỖI Ở ĐÂY: TRUYỀN SỐ TIỀN ĐÚNG SANG ---
+                totalContainer.querySelector('#payTotalBtn').addEventListener('click', () => {
+                    const notes = encodeURIComponent(aggregatedNotes.join('; '));
+                    // Gửi finalAmount chuẩn xác sang trang chi tiết để nó hiển thị đúng
+                    window.location.href = `thanhtoan_lichsu.html?payer=${encodeURIComponent(payer)}&total=1&finalAmount=${totalFinal}&original=${totalOriginal}&notes=${notes}`;
+                });
+            }
+
+            // RENDER DANH SÁCH BILL (CHỈ ĐỂ XEM - KHÔNG BẤM ĐƯỢC)
+            if (processedDebts.length === 0) { container.innerHTML = '<div id="no-debt-message">Không còn nợ.</div>'; }
+            else {
+                const grouped = {}; processedDebts.forEach(d => { if (!grouped[d.historyId]) grouped[d.historyId] = { title: d.title, items: [] }; grouped[d.historyId].items.push(d); });
+                Object.keys(grouped).sort((a, b) => b - a).forEach(hId => {
+                    const group = grouped[hId];
+                    let html = '';
+                    let isResolved = true;
+                    group.items.forEach(debt => {
+                        const isPaid = debt.statusInDb === true || debt.finalAmount <= 0;
+                        if (!isPaid) isResolved = false;
+                        const icon = isPaid ? '<i data-lucide="check-circle-2" style="color:var(--primary)"></i>' : '<i data-lucide="x-circle"></i>';
+
+                        let amountDisplay = isPaid ?
+                            `<span style="color:var(--primary);font-weight:700">${fmtMoney(debt.originalAmount)}</span>` :
+                            `<span style="color:var(--danger);font-weight:700">${fmtMoney(debt.finalAmount)}</span>`;
+
+                        if (!isPaid && debt.originalAmount !== debt.finalAmount) {
+                            amountDisplay = `<span style="text-decoration:line-through;color:var(--text-secondary);margin-right:5px">${fmtMoney(debt.originalAmount)}</span>` + amountDisplay;
+                        }
+
+                        // --- KHÔNG CÓ SỰ KIỆN ONCLICK NÀO CẢ ---
+                        html += `
+                        <li class="debt-item" style="cursor:default; padding:0.75rem 0; border-bottom:1px dashed var(--border)">
+                            <div style="display:flex;align-items:center;gap:0.75rem;">
+                                <span class="payment-status">${icon}</span>
+                                <div style="flex:1">
+                                    <div>Trả <strong>${debt.person}</strong>: ${amountDisplay}</div>
+                                    ${(isPaid && debt.statusInDb !== true && debt.notes.length > 0) ? `
+                                        <div style="font-size:0.8rem; color:#8b5cf6; margin-top:5px; background:rgba(139,92,246,0.08); padding:8px 10px; border-radius:8px; border-left:3px solid #8b5cf6;">
+                                            <div style="font-weight:700; margin-bottom:2px;">🔄 Đã bù trừ tự động</div>
+                                            <div style="color:var(--text-secondary);">${debt.person} cũng nợ ${payer} ở bill khác → hệ thống tự cấn trừ.</div>
+                                            <div style="margin-top:4px; font-weight:600; font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary);">Chi tiết:</div>
+                                            ${debt.notes.map(n => '<div style="display:flex;justify-content:space-between;">• ' + n + '</div>').join('')}
+                                        </div>` : ''}
+                                    ${(debt.statusInDb === true) ? `
+                                        <div style="font-size:0.8rem; color:var(--primary); font-weight:500; margin-top:4px; background:rgba(99,102,241,0.08); padding:6px 10px; border-radius:8px; border-left:3px solid var(--primary);">
+                                            ✅ Đã xác nhận thanh toán (chuyển khoản hoặc admin duyệt)
+                                        </div>` : ''}
+                                    ${(!isPaid && debt.notes.length > 0) ? `
+                                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:4px;background:rgba(139,92,246,0.06);padding:6px 10px;border-radius:6px;">
+                                            <div style="font-weight:600; color:#8b5cf6; margin-bottom:2px;">🔄 Bù trừ một phần:</div>
+                                            ${debt.notes.map(n => '• ' + n).join('<br>')}
+                                        </div>` : ''}
+                                </div>
+                            </div>
+                        </li>
+                    `;
+                    });
+                    const card = document.createElement('div'); card.className = `history-card ${isResolved ? 'fully-paid' : ''}`;
+                    card.innerHTML = `<div class="history-card-header"><h2>${group.title}</h2></div><ul class="debt-list" style="display:block">${html}</ul>`;
+                    container.appendChild(card);
+                });
+            }
+            lucide.createIcons();
+        }
+
+        onValue(ref(db, 'paidList'), snap => { paidStatus = snap.exists() ? snap.val() : {}; if (allHistoryData) updateUI(); });
+        if (payer) renderHistoryDebts();
+    </script>
+</body>
+
+</html>

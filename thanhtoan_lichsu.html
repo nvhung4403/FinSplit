@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Thanh toán Lịch sử</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css?v=100">
+    <link rel="stylesheet" href="payment-detail.css?v=100">
+</head>
+
+<body class="dark-mode">
+
+    <h1 id="pageTitle" class="main-title">💸 Thanh toán</h1>
+    <div class="container" id="payList"></div>
+    <div id="toastNotification" class="toast-notification"><i data-lucide="clipboard-check"></i> Đã sao chép!</div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getDatabase, ref, set, remove, onValue, get } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyD1b0VVYy297LzrfPd4S2faljsgmNfvzEk", authDomain: "hung-355812.firebaseapp.com", databaseURL: "https://hung-355812-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "hung-355812", storageBucket: "hung-355812.appspot.com", messagingSenderId: "788577107540", appId: "1:788577107540:web:ca5b149d5e5a45bba937c1", measurementId: "G-JPNZC88YFG" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const normalizeName = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+        let bankInfo = {};
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const payer = urlParams.get('payer');
+        const historyId = urlParams.get('historyId');
+        const totalMode = urlParams.get('total') === '1';
+
+        // Dữ liệu từ URL (Chỉ dùng cho chế độ Bill lẻ)
+        const urlFinalAmount = urlParams.get('finalAmount') ? parseInt(urlParams.get('finalAmount')) : null;
+        const urlOriginal = urlParams.get('original') ? parseInt(urlParams.get('original')) : null;
+        const urlNotes = urlParams.get('notes') ? decodeURIComponent(urlParams.get('notes')) : '';
+
+        const payList = document.getElementById('payList');
+        const fmtMoney = num => num.toLocaleString('vi-VN') + ' VND';
+        function parseInputToNumber(str) { if (!str) return 0; const d = String(str).replace(/[^0-9]/g, ''); if (!d) return 0; let n = parseInt(d, 10); if (n < 1000) n *= 1000; return n; }
+
+        function calculateDebtForHistory(historyData) {
+            const pair = {}; if (!historyData) return {};
+            const items = Array.isArray(historyData) ? historyData : Object.values(historyData);
+            items.forEach(item => {
+                if (!item) return;
+                const amount = parseInputToNumber(item.amount);
+                const bens = (item.bens || []).filter(b => b.checked);
+                if (bens.length === 0) return;
+                const totalOwn = bens.reduce((s, b) => s + parseInputToNumber(b.part), 0);
+                const remain = Math.max(amount - totalOwn, 0);
+                const totalGuests = (item.bens || []).reduce((s, b) => s + (parseInt(b.guestCount) || 0), 0);
+                const tParts = bens.length + totalGuests;
+                const share = tParts > 0 ? remain / tParts : 0;
+                (item.bens || []).forEach(b => {
+                    if (!b.checked && !(parseInt(b.guestCount) > 0)) return;
+                    let pay = (b.checked ? (parseInputToNumber(b.part) + share) : 0);
+                    const gCount = parseInt(b.guestCount) || 0;
+                    if (gCount > 0) { pay += share * gCount; }
+                    if (pay > 0 && item.payer !== b.name) {
+                        const k = `${b.name}|${item.payer}`; pair[k] = (pair[k] || 0) + pay;
+                    }
+                });
+            });
+            const net = {}; const done = new Set();
+            Object.keys(pair).forEach(k => {
+                if (done.has(k)) return;
+                const [f, t] = k.split('|'); const rev = `${t}|${f}`;
+                const a = pair[k] || 0, b = pair[rev] || 0;
+                if (a > b) { if (!net[t]) net[t] = {}; net[t][f] = a - b; } else if (b > a) { if (!net[f]) net[f] = {}; net[f][t] = b - a; }
+                done.add(k); done.add(rev);
+            });
+            return net;
+        }
+
+        // HÀM TÍNH BÙ TRỪ TỔNG QUÁT
+        function calculateOffsetCredits(allHistory, payerName, receiverName) {
+            let totalCredit = 0;
+            let details = [];
+            let reversePayIds = []; // Thu thập các payId ngược lại để mark offset khi thanh toán
+            Object.keys(allHistory).forEach(hId => {
+                const record = allHistory[hId];
+                if (!record || !record.data) return;
+                const debts = calculateDebtForHistory(record.data);
+                // Tìm xem receiver có nợ payer không?
+                if (debts[payerName] && debts[payerName][receiverName]) {
+                    const amount = debts[payerName][receiverName];
+                    const checkPayId = `${hId}__${normalizeName(receiverName)}__${normalizeName(payerName)}`;
+                    // Chỉ tính nếu chưa trả (hoặc offset)
+                    const status = paidStatus[checkPayId];
+                    if (!status || status === 'offset') {
+                        if (amount >= 100) {
+                            const roundedAmt = Math.round(amount);
+                            totalCredit += roundedAmt;
+                            details.push(`Bill ${hId}: ${fmtMoney(roundedAmt)}`);
+                            reversePayIds.push(checkPayId);
+                        }
+                    }
+                }
+            });
+            return { totalCredit, details, reversePayIds };
+        }
+
+        let paidStatus = {};
+        let debtsToRender = [];
+        let historyTitle = '';
+        lucide.createIcons();
+
+        async function initialFetchAndRender() {
+            if (!payer) { payList.innerHTML = '<h1 class="main-title">Lỗi: Thiếu thông tin.</h1>'; return; }
+
+            const [snapAll, snapPaid, snapUsers] = await Promise.all([get(ref(db, 'history')), get(ref(db, 'paidList')), get(ref(db, 'users'))]);
+            paidStatus = snapPaid.exists() ? snapPaid.val() : {};
+            if (snapUsers.exists()) {
+                const usersData = snapUsers.val();
+                usersData.forEach(u => {
+                    bankInfo[normalizeName(u.name)] = {
+                        bank: u.bank || '',
+                        acc: u.acc || '',
+                        name: u.fullName || '',
+                        localQR: u.localQR || ''
+                    };
+                });
+            }
+
+            if (!snapAll.exists()) { payList.innerHTML = '<h1 class="main-title">Không có dữ liệu.</h1>'; return; }
+            const allHistory = snapAll.val();
+            debtsToRender = [];
+
+            // --- CHẾ ĐỘ THANH TOÁN TỔNG ---
+            if (totalMode) {
+                historyTitle = `Thanh toán tổng cho ${payer}`;
+                let totalsByReceiver = {};
+
+                // 1. Cộng dồn nợ gốc cho từng người
+                Object.keys(allHistory).forEach(hId => {
+                    const debts = calculateDebtForHistory(allHistory[hId].data);
+                    for (const receiver in debts) {
+                        if (debts[receiver][payer]) {
+                            const amt = Math.round(debts[receiver][payer]);
+                            const payId = `${hId}__${normalizeName(payer)}__${normalizeName(receiver)}`;
+                            if ((!paidStatus[payId] || paidStatus[payId] === 'offset') && amt >= 100) {
+                                if (!totalsByReceiver[receiver]) totalsByReceiver[receiver] = { amount: 0, payIds: [] };
+                                totalsByReceiver[receiver].amount += amt;
+                                totalsByReceiver[receiver].payIds.push(payId);
+                            }
+                        }
+                    }
+                });
+
+                // 2. Tính bù trừ riêng cho từng người
+                Object.keys(totalsByReceiver).forEach(receiver => {
+                    let originalAmt = totalsByReceiver[receiver].amount;
+
+                    // Tính xem người này nợ ngược lại mình bao nhiêu
+                    const { totalCredit, details, reversePayIds } = calculateOffsetCredits(allHistory, payer, receiver);
+
+                    let deducted = Math.round(Math.min(originalAmt, totalCredit));
+                    let finalAmt = Math.round(originalAmt - deducted);
+
+                    // Tạo ghi chú offset
+                    let note = '';
+                    if (deducted > 0) note = `Đã trừ tổng ${fmtMoney(deducted)} từ các khoản họ nợ bạn.`;
+
+                    if (finalAmt <= 0) return; // Nếu hết nợ thì không hiện ở trang thanh toán tổng
+
+                    const receiverKey = normalizeName(receiver);
+                    const bInfo = bankInfo[receiverKey] || {};
+                    const desc = `${payer}_${receiver}_total`.slice(0, 50);
+                    const template = 'compact2';
+                    const qrSrc = (bInfo.bank && bInfo.acc)
+                        ? `https://img.vietqr.io/image/${bInfo.bank}-${bInfo.acc}-${template}.png?amount=${finalAmt}&addInfo=${encodeURIComponent(desc)}&accountName=${encodeURIComponent(bInfo.name)}`
+                        : (bInfo.localQR || 'img/qr_default.png');
+
+                    debtsToRender.push({
+                        payId: `total_${receiver}`,
+                        payIds: totalsByReceiver[receiver].payIds,
+                        reversePayIds: reversePayIds, // Các payId ngược lại cần mark offset
+                        receiver,
+                        originalAmount: originalAmt,
+                        finalAmount: finalAmt,
+                        deducted: deducted,
+                        notes: note,
+                        desc, qrSrc, bankInfo: bInfo,
+                        statusInDb: false // Mode tổng là chưa lưu
+                    });
+                });
+
+            }
+            // --- CHẾ ĐỘ BILL LẺ ---
+            else if (historyId) {
+                const record = allHistory[historyId];
+                if (record) {
+                    historyTitle = record.title || 'Chi tiết';
+                    const debtsMap = calculateDebtForHistory(record.data);
+
+                    for (const receiver in debtsMap) {
+                        if (debtsMap[receiver][payer]) {
+                            const originalDB = Math.round(debtsMap[receiver][payer]);
+                            if (originalDB < 100) continue;
+
+                            const payId = `${historyId}__${normalizeName(payer)}__${normalizeName(receiver)}`;
+
+                            // Ưu tiên lấy từ URL nếu có (để khớp với trang trước)
+                            let finalAmount = Math.round((urlFinalAmount !== null) ? urlFinalAmount : originalDB);
+                            let originalAmount = Math.round((urlOriginal !== null) ? urlOriginal : originalDB);
+                            let deducted = Math.round(originalAmount - finalAmount);
+
+                            const receiverKey = normalizeName(receiver);
+                            const bInfo = bankInfo[receiverKey] || {};
+                            const desc = `Tra_no_${receiver}_${historyId.slice(-4)}`.slice(0, 50);
+                            const template = 'compact2';
+                            const qrSrc = (finalAmount > 0 && bInfo.bank && bInfo.acc)
+                                ? `https://img.vietqr.io/image/${bInfo.bank}-${bInfo.acc}-${template}.png?amount=${finalAmount}&addInfo=${encodeURIComponent(desc)}&accountName=${encodeURIComponent(bInfo.name)}`
+                                : (bInfo.localQR || 'img/qr_default.png');
+
+                            debtsToRender.push({
+                                payId, receiver,
+                                originalAmount, finalAmount, deducted,
+                                notes: urlNotes, desc, qrSrc, bankInfo: bInfo, statusInDb: paidStatus[payId]
+                            });
+                        }
+                    }
+                }
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            payList.innerHTML = '';
+            document.getElementById('pageTitle').textContent = `💸 ${historyTitle}`;
+
+            if (!debtsToRender.length) { payList.innerHTML = '<div id="no-debt-message">Không có khoản nợ nào.</div>'; return; }
+
+            debtsToRender.forEach(debt => {
+                const isCompleted = debt.statusInDb === true || debt.finalAmount <= 0;
+                const box = document.createElement('div');
+                box.className = `box ${isCompleted ? 'done' : ''}`;
+
+                let offsetInfo = '';
+                if (debt.deducted > 0) {
+                    offsetInfo = `
+                <div style="background:#e0e7ff; color:#3730a3; padding:10px; border-radius:8px; font-size:0.9rem; margin-bottom:10px; text-align:left">
+                    <div style="font-weight:600; margin-bottom:4px">ℹ️ Bù trừ công nợ</div>
+                    <div>Gốc: ${fmtMoney(debt.originalAmount)}</div>
+                    <div>${debt.notes ? debt.notes : `Đã trừ: -${fmtMoney(debt.deducted)}`}</div>
+                    <div style="margin-top:5px; font-weight:bold; color:#dc2626">Cần trả: ${fmtMoney(debt.finalAmount)}</div>
+                </div>
+            `;
+                }
+
+                let overlayContent = '';
+                let stamp = 'ĐÃ THANH TOÁN';
+                if (debt.finalAmount <= 0) {
+                    stamp = 'ĐÃ CẤN TRỪ';
+                    if (!debt.statusInDb) overlayContent = `<button class="btn btn-primary confirm-transfer-btn" data-payid="${debt.payId}" data-type="offset">Xác nhận đã xong</button>`;
+                } else {
+                    overlayContent = `<button class="btn btn-primary confirm-transfer-btn" data-payid="${debt.payId}" data-type="manual">Xác nhận chuyển khoản</button>`;
+                }
+
+                const qrHtml = debt.finalAmount > 0 ? `<img src="${debt.qrSrc}"><div>(Nhấn giữ ảnh để lưu)</div><div class="note-qr">Quét mã để trả ${fmtMoney(debt.finalAmount)}</div>` : `<div style="padding:20px; font-weight:bold; color:var(--primary)">Không cần chuyển khoản</div>`;
+
+                box.innerHTML = `
+            <div class="payment-overlay">${overlayContent}</div>
+            <div class="stamp-overlay"><div class="stamp-text">${stamp}</div></div>
+            <div class="box-content">
+                <h3>Trả cho: ${debt.receiver}</h3>
+                ${offsetInfo}
+                ${qrHtml}
+                <div class="info">
+                    <div class="line"><div class="label">Chủ Tài Khoản</div><div class="value">${debt.bankInfo.name || '-'}</div></div>
+                    <div class="line"><div class="label">STK</div><div id="acc_${debt.payId}" class="value">${debt.bankInfo.acc}</div><button class="copy-btn" onclick="copyText('acc_${debt.payId}',this)">Copy</button></div>
+                    <div class="line"><div class="label">Số tiền</div><div id="amt_${debt.payId}" class="value money">${fmtMoney(debt.finalAmount)}</div><button class="copy-btn" onclick="copyText('amt_${debt.payId}',this)">Copy</button></div>
+                    <div class="line"><div class="label">Nội dung</div><div id="desc_${debt.payId}" class="value">${debt.desc}</div><button class="copy-btn" onclick="copyText('desc_${debt.payId}',this)">Copy</button></div>
+                </div>
+                <div class="action-buttons"><button class="btn btn-secondary" data-payid="${debt.payId}" data-action="cancel">Hủy</button></div>
+            </div>
+        `;
+                payList.appendChild(box);
+            });
+            lucide.createIcons();
+        }
+
+        window.copyText = function (id, btn) { navigator.clipboard.writeText(document.getElementById(id).innerText.replace(' VND', '')); };
+
+        async function logAction(actionType, message) {
+            try {
+                const currentUser = localStorage.getItem('currentUser') || 'Admin';
+                const timestamp = Date.now();
+                await set(ref(db, `logs/${timestamp}`), {
+                    user: currentUser,
+                    type: actionType,
+                    message: message,
+                    time: timestamp
+                });
+            } catch (e) { }
+        }
+
+        payList.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+            const payId = btn.dataset.payid;
+            const debt = debtsToRender.find(d => d.payId === payId);
+
+            if (btn.classList.contains('confirm-transfer-btn')) {
+                // Hỗ trợ mảng ID (cho mode tổng) hoặc 1 ID (cho mode lẻ)
+                const ids = debt.payIds || [payId];
+                const val = (btn.dataset.type === 'offset') ? 'offset' : true;
+                try {
+                    await Promise.all(ids.map(id => set(ref(db, `paidList/${id}`), val)));
+
+                    // Cũng mark các khoản nợ ngược (bù trừ) là đã hoàn tất (true)
+                    if (debt.reversePayIds && debt.reversePayIds.length > 0) {
+                        await Promise.all(debt.reversePayIds.map(id => set(ref(db, `paidList/${id}`), true)));
+                        // Lưu lastPaidAt cho các khoản ngược
+                        const reverseHistoryIds = new Set();
+                        debt.reversePayIds.forEach(id => {
+                            const parts = id.split('__');
+                            if (parts.length >= 2) {
+                                reverseHistoryIds.add(parts[0]);
+                            }
+                        });
+                        const ts = Date.now();
+                        await Promise.all([...reverseHistoryIds].map(hId => {
+                            // Lấy payerNorm từ reverse payId (phần thứ 2)
+                            const matchingIds = debt.reversePayIds.filter(id => id.startsWith(hId + '__'));
+                            return Promise.all(matchingIds.map(id => {
+                                const revPayerNorm = id.split('__')[1];
+                                return set(ref(db, `history/${hId}/lastPaidAt/${revPayerNorm}`), ts);
+                            }));
+                        }));
+                    }
+
+                    // Lưu lastPaidAt cho người thanh toán cụ thể
+                    const historyIds = new Set();
+                    ids.forEach(id => {
+                        const parts = id.split('__');
+                        if (parts.length >= 1) historyIds.add(parts[0]);
+                    });
+                    const paidAtTimestamp = Date.now();
+                    const payerNorm = normalizeName(payer);
+                    await Promise.all([...historyIds].map(hId =>
+                        set(ref(db, `history/${hId}/lastPaidAt/${payerNorm}`), paidAtTimestamp)
+                    ));
+
+                    // Xử lý thông báo log
+                    let billName = `thuộc ${historyTitle}`;
+                    if (ids.length > 1) billName = ' (tất toán tổng hợp)';
+                    await logAction(val === 'offset' ? 'Hoàn thành bù trừ' : 'Xác nhận chuyển khoản', `Khoản ${fmtMoney(debt.finalAmount)} tới ${debt.receiver} ${billName}`);
+
+                    // Tạo bill mới nếu thanh toán thủ công bill tháng hiện tại
+                    if (val === true) {
+                        try {
+                            const now = new Date();
+                            const cm = now.getMonth(), cy = now.getFullYear();
+                            const paidBillIds = new Set();
+                            ids.forEach(id => { const p = id.split('__'); if (p[0]) paidBillIds.add(p[0]); });
+                            let hasCurrentMonth = false;
+                            for (const bid of paidBillIds) {
+                                const bd = new Date(parseInt(bid));
+                                if (bd.getMonth() === cm && bd.getFullYear() === cy) { hasCurrentMonth = true; break; }
+                            }
+                            if (hasCurrentMonth) {
+                                const allH = await get(ref(db, 'history')).then(s => s.val() || {});
+                                const sKeys = Object.keys(allH).sort((a, b) => b - a);
+                                let newestId = null, count = 0;
+                                for (const k of sKeys) {
+                                    const dd = new Date(parseInt(k));
+                                    if (dd.getMonth() === cm && dd.getFullYear() === cy) { if (!newestId) newestId = k; count++; }
+                                }
+                                if (newestId && paidBillIds.has(newestId)) {
+                                    const suffix = count >= 1 ? ` (${count + 1})` : '';
+                                    const label = `Bill Tháng ${cm + 1}/${cy}${suffix}`;
+                                    const nk = Date.now().toString();
+                                    await set(ref(db, `history/${nk}`), { title: label, createdAt: nk, totalExpense: 0, data: [] });
+                                    await logAction('Khởi tạo Bill', `Tự động tạo "${label}" sau thanh toán`);
+                                }
+                            }
+                        } catch (err) { console.error('Auto-create bill:', err); }
+                    }
+
+                    if (debt) debt.statusInDb = val;
+                    updateUI();
+                } catch (e) { console.error(e); }
+            } else if (btn.dataset.action === 'cancel') {
+                const ids = debt.payIds || [payId];
+                try {
+                    await Promise.all(ids.map(id => remove(ref(db, `paidList/${id}`))));
+                    await logAction('Hủy thanh toán', `Đã hủy thanh toán khoản ${fmtMoney(debt.finalAmount)} tới ${debt.receiver}`);
+                    if (debt) debt.statusInDb = null;
+                    updateUI();
+                } catch (e) { console.error(e); }
+            }
+        });
+
+        onValue(ref(db, 'paidList'), snap => { paidStatus = snap.val() || {}; if (debtsToRender.length) { debtsToRender.forEach(d => d.statusInDb = paidStatus[d.payId]); updateUI(); } });
+
+        initialFetchAndRender();
+    </script>
+</body>
+
+</html>
